@@ -9,6 +9,9 @@ const i18n = require('./i18n.js')
 const KEY_DATA = 'gs_data_v1'
 const KEY_PROFILE = 'gs_profile_v1'
 const KEY_MINE = 'gs_mine_v1'
+/* 本机稳定身份：用于判断「我是不是这场接龙的创建者」。
+   上云后这里换成 openid 即可，权限判断逻辑不用动。 */
+const KEY_SELF = 'gs_self_v1'
 
 /* 内存缓存：启动时读一次，写操作同步回 Storage */
 const cache = {
@@ -16,7 +19,8 @@ const cache = {
   solitaire: null,
   participants: [],
   profile: null,
-  myId: ''
+  myId: '',
+  selfId: ''
 }
 
 function readLocal(key, def) {
@@ -84,6 +88,56 @@ function uid(prefix) {
   return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
+/* ------------------------------------------------------------ 本机身份 */
+function ensureSelf() {
+  if (cache.selfId) return cache.selfId
+  cache.selfId = readLocal(KEY_SELF, '')
+  if (!cache.selfId) {
+    cache.selfId = uid('u')
+    writeLocal(KEY_SELF, cache.selfId)
+  }
+  return cache.selfId
+}
+
+function getSelfId() {
+  ensure()
+  return ensureSelf()
+}
+
+/* ------------------------------------------------------------ 创建者 */
+function findParticipant(id) {
+  for (let i = 0; i < cache.participants.length; i += 1) {
+    if (cache.participants[i].id === id) return cache.participants[i]
+  }
+  return null
+}
+
+/**
+ * 我是否是这场接龙的创建者
+ * 两种成立情形：ownerId 等于本机身份，或 ownerId 等于我提交的那条记录
+ * （后者用于创建者转让之后，新创建者凭自己的记录认领权限）
+ */
+function isOwner() {
+  ensure()
+  const ownerId = cache.solitaire && cache.solitaire.ownerId
+  if (!ownerId) return false
+  if (ownerId === ensureSelf()) return true
+  return !!cache.myId && ownerId === cache.myId
+}
+
+/** 创建者信息：给页面展示与权限判断用 */
+function getOwner() {
+  ensure()
+  const ownerId = (cache.solitaire && cache.solitaire.ownerId) || ''
+  const hit = ownerId ? findParticipant(ownerId) : null
+  return {
+    id: ownerId,
+    isMine: isOwner(),
+    participantId: hit ? hit.id : '',
+    name: hit ? hit.name : ((cache.profile && cache.profile.name) || '')
+  }
+}
+
 /* ------------------------------------------------------------ 默认数据 */
 function defaultSolitaire() {
   return {
@@ -147,6 +201,13 @@ function bootstrap() {
   }
   cache.profile = readLocal(KEY_PROFILE, null)
   cache.myId = readLocal(KEY_MINE, '')
+  ensureSelf()
+  // 没有 ownerId 说明这是新接龙：谁先创建，谁是创建者。
+  // 旧数据升级时也走这条分支，本机即视为创建者。
+  if (!cache.solitaire.ownerId) {
+    cache.solitaire.ownerId = cache.selfId
+    flush()
+  }
   cache.ready = true
   return cache
 }
@@ -172,15 +233,19 @@ function getSolitaire() {
   const deadlineAt = Number(s.deadlineAt) || 0
   const expired = deadlineAt > 0 && deadlineAt < Date.now()
   const full = quota > 0 && left === 0
+  // closed：发起人手动提前关闭（区别于时间到了的 expired）
+  const closed = s.closed === true
 
   let status = 'open'
-  if (expired) status = 'expired'
+  if (closed) status = 'closed'
+  else if (expired) status = 'expired'
   else if (full) status = 'full'
 
   const statusMap = {
     open: i18n.t('intro.status.open'),
     expired: i18n.t('intro.status.expired'),
-    full: i18n.t('intro.status.full')
+    full: i18n.t('intro.status.full'),
+    closed: i18n.t('intro.status.closed')
   }
 
   return {
@@ -202,8 +267,10 @@ function getSolitaire() {
     deadlineText: deadlineText(deadlineAt),
     status: status,
     statusText: statusMap[status],
+    closed: closed,
     percent: quota > 0 ? Math.min(100, Math.round(joined / quota * 100)) : 0,
-    canJoin: status === 'open'
+    canJoin: status === 'open',
+    isOwner: isOwner()
   }
 }
 
@@ -224,6 +291,7 @@ function decorate(list) {
         : i18n.t('list.sourceManual'),
       remark: it.remark || '',
       mine: !!cache.myId && it.id === cache.myId,
+      isOwner: it.id === ((cache.solitaire && cache.solitaire.ownerId) || ''),
       createdAt: it.createdAt,
       timeText: formatTime(it.createdAt)
     }
@@ -277,14 +345,27 @@ function addParticipant(payload) {
   return { ok: true, id: record.id }
 }
 
-/** 取消自己的接龙（按 id 删除） */
+/**
+ * 删除一条接龙记录
+ * 允许：我删我自己的；创建者删任何人。
+ * 例外：当前发起人自己的记录受保护 —— 要删得先转让身份。
+ */
 function removeParticipant(id) {
   ensure()
-  const before = cache.participants.length
+  const target = findParticipant(id)
+  if (!target) return { ok: false, msg: i18n.t('err.notFound') }
+
+  const isMine = !!cache.myId && cache.myId === target.id
+  if (!isMine && !isOwner()) {
+    return { ok: false, msg: i18n.t('err.notOwner') }
+  }
+  if (target.id === cache.solitaire.ownerId) {
+    return { ok: false, msg: i18n.t('err.ownerProtected') }
+  }
+
   cache.participants = cache.participants.filter(function (it) {
     return it.id !== id
   })
-  if (cache.participants.length === before) return { ok: false, msg: i18n.t('err.notFound') }
   flush()
   if (cache.myId === id) {
     cache.myId = ''
@@ -315,6 +396,11 @@ function updateParticipant(id, payload) {
   }
   if (!hit) return { ok: false, msg: i18n.t('err.notFound') }
 
+  const isMine = !!cache.myId && cache.myId === hit.id
+  if (!isMine && !isOwner()) {
+    return { ok: false, msg: i18n.t('err.notOwner') }
+  }
+
   hit.name = name
   hit.remark = remark
   hit.source = (payload && payload.source) === 'wechat' ? 'wechat' : 'manual'
@@ -323,6 +409,77 @@ function updateParticipant(id, payload) {
   }
   flush()
   return { ok: true, id: id }
+}
+
+/* ------------------------------------------------------------ 创建者特权 */
+const EDITABLE_TEXT = [
+  ['title', 60],
+  ['desc', 200],
+  ['host', 20],
+  ['location', 60]
+]
+
+/**
+ * 编辑接龙信息 —— 仅创建者
+ * payload 可含：title / desc / host / location / quota / deadlineAt / closed
+ * quota 传 0 表示不限名额；closed=true 提前关闭，false 重开
+ */
+function updateSolitaire(payload) {
+  ensure()
+  if (!isOwner()) return { ok: false, msg: i18n.t('err.notOwner') }
+
+  const p = payload || {}
+  const s = cache.solitaire
+
+  /* 先整体校验，校验通过才落盘，避免改一半留脏数据 */
+  if (p.quota !== undefined) {
+    const q = Number(p.quota)
+    if (isNaN(q) || q < 0) return { ok: false, msg: i18n.t('err.invalidQuota') }
+    if (q > 0 && q < cache.participants.length) {
+      return { ok: false, msg: i18n.t('err.quotaBelowJoined') }
+    }
+  }
+  if (p.deadlineAt !== undefined) {
+    const d = Number(p.deadlineAt)
+    if (!d || d <= 0) return { ok: false, msg: i18n.t('err.invalidDeadline') }
+  }
+  for (let i = 0; i < EDITABLE_TEXT.length; i += 1) {
+    const key = EDITABLE_TEXT[i][0]
+    const max = EDITABLE_TEXT[i][1]
+    if (p[key] === undefined) continue
+    const v = trim(p[key])
+    if (!v) continue // 空值视为不修改，不是清空
+    if (v.length > max) return { ok: false, msg: i18n.t('err.fieldTooLong') }
+  }
+
+  for (let i = 0; i < EDITABLE_TEXT.length; i += 1) {
+    const key = EDITABLE_TEXT[i][0]
+    if (p[key] === undefined) continue
+    const v = trim(p[key])
+    if (!v) continue
+    s[key] = v
+  }
+  if (p.quota !== undefined) s.quota = Math.floor(Number(p.quota))
+  if (p.deadlineAt !== undefined) s.deadlineAt = Number(p.deadlineAt)
+  if (p.closed !== undefined) s.closed = !!p.closed
+
+  flush()
+  return { ok: true }
+}
+
+/** 转让发起人身份 —— 仅创建者，且目标必须是现有接龙者 */
+function transferOwner(targetId) {
+  ensure()
+  if (!isOwner()) return { ok: false, msg: i18n.t('err.notOwner') }
+  const id = trim(targetId)
+  if (!id) return { ok: false, msg: i18n.t('err.notFound') }
+  const hit = findParticipant(id)
+  if (!hit) return { ok: false, msg: i18n.t('err.notFound') }
+  if (hit.id === cache.solitaire.ownerId) return { ok: false, msg: i18n.t('err.notFound') }
+
+  cache.solitaire.ownerId = hit.id
+  flush()
+  return { ok: true, id: hit.id }
 }
 
 /* ------------------------------------------------------------ 本机资料 */
@@ -351,6 +508,10 @@ function resetAll() {
   cache.participants = seedParticipants()
   cache.profile = { name: '', avatar: '' }
   cache.myId = ''
+  // 重置数据不等于换人：本机身份保留，重置后依旧是这场接龙的创建者
+  if (!cache.selfId) ensureSelf()
+  cache.solitaire.ownerId = cache.selfId
+  cache.solitaire.closed = false
   flush()
   writeLocal(KEY_PROFILE, cache.profile)
   writeLocal(KEY_MINE, '')
@@ -365,6 +526,11 @@ function getMyId() {
 module.exports = {
   bootstrap: bootstrap,
   getSolitaire: getSolitaire,
+  updateSolitaire: updateSolitaire,
+  getOwner: getOwner,
+  transferOwner: transferOwner,
+  isOwner: isOwner,
+  getSelfId: getSelfId,
   listParticipants: listParticipants,
   addParticipant: addParticipant,
   updateParticipant: updateParticipant,

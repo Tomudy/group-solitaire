@@ -1,6 +1,20 @@
 const store = require('../../utils/store')
 const i18n = require('../../utils/i18n')
 
+function pad2(n) {
+  return n < 10 ? '0' + n : '' + n
+}
+
+/** Date -> 'YYYY-MM-DD'，喂给 picker mode="date" */
+function dateOf(d) {
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate())
+}
+
+/** Date -> 'HH:mm'，喂给 picker mode="time" */
+function timeOf(d) {
+  return pad2(d.getHours()) + ':' + pad2(d.getMinutes())
+}
+
 Page({
   data: {
     lang: 'zh',
@@ -32,7 +46,11 @@ Page({
     nameFocus: false,
     editing: false,
     mine: null,
-    submitting: false
+    submitting: false,
+    showAdmin: false,
+    adminForm: { title: '', desc: '', host: '', location: '', quota: '0', date: '', time: '', transferTo: '' },
+    // 可受让发起人身份的人：除自己以外的接龙者
+    transferList: []
   },
 
   onLoad() {
@@ -246,6 +264,171 @@ Page({
           return
         }
         wx.showToast({ title: i18n.t('msg.cancelled'), icon: 'success' })
+        this.refresh()
+      }
+    })
+  },
+
+  /* ---------------------------------------------- 发起人管理 */
+  openAdmin() {
+    const s = store.getSolitaire()
+    const d = new Date(s.deadlineAt || Date.now())
+    const list = store.listParticipants()
+    // 不能转给自己：自己的那条记录由「取消接龙」处理
+    const mineId = this.data.mine ? this.data.mine.id : ''
+    const transferList = []
+    for (let i = 0; i < list.length; i += 1) {
+      if (list[i].id !== mineId) transferList.push(list[i])
+    }
+
+    this.setData({
+      showAdmin: true,
+      adminForm: {
+        title: s.title || '',
+        desc: s.desc || '',
+        host: s.host || '',
+        location: s.location || '',
+        quota: String(s.quota || 0),
+        date: dateOf(d),
+        time: timeOf(d),
+        transferTo: ''
+      },
+      transferList: transferList
+    })
+  },
+
+  closeAdmin() {
+    this.setData({ showAdmin: false })
+  },
+
+  onAdminInput(e) {
+    const field = e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.field
+    if (!field) return
+    const value = (e.detail && e.detail.value) !== undefined ? e.detail.value : ''
+    this.setData({ ['adminForm.' + field]: value })
+  },
+
+  onAdminDate(e) {
+    this.setData({ 'adminForm.date': (e.detail && e.detail.value) || '' })
+  },
+
+  onAdminTime(e) {
+    this.setData({ 'adminForm.time': (e.detail && e.detail.value) || '' })
+  },
+
+  /** 保存接龙信息：空值视为不修改，名额 0 表示不限 */
+  submitAdmin() {
+    const f = this.data.adminForm
+
+    const dp = String(f.date || '').split('-')
+    const tp = String(f.time || '').split(':')
+    const dt = new Date(
+      Number(dp[0]) || 1970,
+      (Number(dp[1]) || 1) - 1,
+      Number(dp[2]) || 1,
+      Number(tp[0]) || 0,
+      Number(tp[1]) || 0,
+      0,
+      0
+    )
+
+    const res = store.updateSolitaire({
+      title: f.title,
+      desc: f.desc,
+      host: f.host,
+      location: f.location,
+      quota: Number(f.quota),
+      deadlineAt: dt.getTime()
+    })
+
+    if (!res.ok) {
+      wx.showToast({ title: res.msg || i18n.t('err.generic'), icon: 'none' })
+      return
+    }
+
+    this.setData({ showAdmin: false })
+    wx.showToast({ title: i18n.t('owner.updatedToast'), icon: 'success' })
+    this.refresh()
+  },
+
+  /** 提前截止 / 重新开放：关闭需二次确认，重开直接生效 */
+  toggleClose() {
+    if (this.data.solitaire.closed) {
+      const r = store.updateSolitaire({ closed: false })
+      if (!r.ok) {
+        wx.showToast({ title: r.msg || i18n.t('err.generic'), icon: 'none' })
+        return
+      }
+      wx.showToast({ title: i18n.t('owner.reopenedToast'), icon: 'success' })
+      this.refresh()
+      return
+    }
+
+    wx.showModal({
+      title: i18n.t('owner.closeConfirmTitle'),
+      content: i18n.t('owner.closeConfirmContent'),
+      cancelText: i18n.t('msg.modalCancelText'),
+      confirmText: i18n.t('owner.closeAction'),
+      confirmColor: '#FF6B35',
+      success: (res) => {
+        if (!res.confirm) return
+        const r = store.updateSolitaire({ closed: true })
+        if (!r.ok) {
+          wx.showToast({ title: r.msg || i18n.t('err.generic'), icon: 'none' })
+          return
+        }
+        wx.showToast({ title: i18n.t('owner.closedToast'), icon: 'success' })
+        this.refresh()
+      }
+    })
+  },
+
+  /** 转让发起人身份：目标必须是现有接龙者，转让后本机失去管理权限 */
+  pickTransfer(e) {
+    const ds = e.currentTarget && e.currentTarget.dataset
+    const id = ds && ds.id
+    const name = (ds && ds.name) || ''
+
+    wx.showModal({
+      title: i18n.t('owner.transferConfirmTitle'),
+      content: i18n.t('owner.transferConfirmContent', { n: name }),
+      cancelText: i18n.t('msg.modalCancelText'),
+      confirmText: i18n.t('msg.modalConfirmText'),
+      confirmColor: '#FF6B35',
+      success: (res) => {
+        if (!res.confirm) return
+        const r = store.transferOwner(id)
+        if (!r.ok) {
+          wx.showToast({ title: r.msg || i18n.t('err.generic'), icon: 'none' })
+          return
+        }
+        this.setData({ showAdmin: false })
+        wx.showToast({ title: i18n.t('owner.transferredToast'), icon: 'success' })
+        this.refresh()
+      }
+    })
+  },
+
+  /** 发起人移除他人记录；自己那条走底部「取消接龙」 */
+  removeEntry(e) {
+    const ds = e.currentTarget && e.currentTarget.dataset
+    const id = ds && ds.id
+    const name = (ds && ds.name) || ''
+
+    wx.showModal({
+      title: i18n.t('owner.removeConfirmTitle'),
+      content: i18n.t('owner.removeConfirmContent', { n: name }),
+      cancelText: i18n.t('msg.modalCancelText'),
+      confirmText: i18n.t('owner.remove'),
+      confirmColor: '#FF6B35',
+      success: (res) => {
+        if (!res.confirm) return
+        const r = store.removeParticipant(id)
+        if (!r.ok) {
+          wx.showToast({ title: r.msg || i18n.t('err.cancelFailed'), icon: 'none' })
+          return
+        }
+        wx.showToast({ title: i18n.t('owner.removedToast'), icon: 'success' })
         this.refresh()
       }
     })

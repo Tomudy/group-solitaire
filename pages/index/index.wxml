@@ -17,6 +17,8 @@
       <view class="status status-{{solitaire.status}}">{{solitaire.statusText}}</view>
     </view>
 
+    <view class="owner-badge" wx:if="{{solitaire.isOwner}}">{{t.owner_badge}}</view>
+
     <view class="intro-desc">{{solitaire.desc}}</view>
 
     <view class="meta">
@@ -44,6 +46,12 @@
       </view>
       <view class="deadline-tip">{{solitaire.deadlineText}}</view>
     </view>
+
+    <!-- 管理入口：仅发起人可见 -->
+    <view class="owner-entry" wx:if="{{solitaire.isOwner}}" bindtap="openAdmin">
+      <text class="owner-entry-t">{{t.owner_manage}}</text>
+      <text class="owner-entry-arrow">›</text>
+    </view>
   </view>
 
   <!-- ================= 接龙者名单 ================= -->
@@ -69,11 +77,21 @@
           <view class="p-line">
             <text class="p-name">{{item.name}}</text>
             <view class="p-mine" wx:if="{{item.mine}}">{{t.list_mine}}</view>
+            <view class="p-owner" wx:if="{{item.isOwner}}">{{t.intro_host}}</view>
             <view class="p-src p-src-{{item.source}}">{{item.sourceText}}</view>
           </view>
           <view class="p-remark" wx:if="{{item.remark}}">{{item.remark}}</view>
           <view class="p-time">{{item.timeText}}</view>
         </view>
+
+        <!-- 发起人可移除他人记录；自己那条走底部「取消接龙」 -->
+        <view
+          class="p-remove"
+          wx:if="{{solitaire.isOwner && !item.mine}}"
+          data-id="{{item.id}}"
+          data-name="{{item.name}}"
+          catchtap="removeEntry"
+        >{{t.owner_remove}}</view>
       </view>
     </block>
 
@@ -102,7 +120,7 @@
   <view class="safe-bottom"></view>
 </view>
 
-<!-- ================= 接龙弹窗 ================= -->
+  <!-- ================= 接龙弹窗 ================= -->
 <view class="mask" wx:if="{{showJoin}}" bindtap="closeJoin"></view>
 <view class="sheet {{showJoin ? 'sheet-in' : ''}}" wx:if="{{showJoin}}">
   <view class="sheet-head">
@@ -181,6 +199,138 @@
   <view class="sheet-actions">
     <button class="btn btn-line" bindtap="closeJoin">{{t.sheet_cancel}}</button>
     <button class="btn btn-primary" hover-class="btn-hover" bindtap="submitJoin" loading="{{submitting}}" disabled="{{submitting}}">{{t.sheet_submit}}</button>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>
+
+<!-- ================= 发起人管理弹窗 ================= -->
+<view class="mask" wx:if="{{showAdmin}}" bindtap="closeAdmin"></view>
+<view class="sheet {{showAdmin ? 'sheet-in' : ''}}" wx:if="{{showAdmin}}">
+  <view class="sheet-head">
+    <text class="sheet-title">{{t.owner_panelTitle}}</text>
+    <view class="sheet-close" bindtap="closeAdmin">×</view>
+  </view>
+
+  <view class="sheet-sub">{{t.owner_panelSub}}</view>
+
+  <view class="form-row">
+    <view class="form-label">
+      <text class="form-label-t">{{t.owner_editTitle}}</text>
+    </view>
+    <input
+      class="form-input"
+      value="{{adminForm.title}}"
+      maxlength="60"
+      placeholder-class="form-ph"
+      data-field="title"
+      bindinput="onAdminInput"
+    />
+  </view>
+
+  <view class="form-row">
+    <view class="form-label">
+      <text class="form-label-t">{{t.owner_editDesc}}</text>
+    </view>
+    <textarea
+      class="form-area"
+      value="{{adminForm.desc}}"
+      maxlength="200"
+      placeholder-class="form-ph"
+      data-field="desc"
+      bindinput="onAdminInput"
+    ></textarea>
+  </view>
+
+  <view class="form-row">
+    <view class="form-label">
+      <text class="form-label-t">{{t.intro_host}}</text>
+    </view>
+    <input
+      class="form-input"
+      value="{{adminForm.host}}"
+      maxlength="20"
+      placeholder-class="form-ph"
+      data-field="host"
+      bindinput="onAdminInput"
+    />
+  </view>
+
+  <view class="form-row">
+    <view class="form-label">
+      <text class="form-label-t">{{t.intro_location}}</text>
+    </view>
+    <input
+      class="form-input"
+      value="{{adminForm.location}}"
+      maxlength="60"
+      placeholder-class="form-ph"
+      data-field="location"
+      bindinput="onAdminInput"
+    />
+  </view>
+
+  <view class="form-row">
+    <view class="form-label">
+      <text class="form-label-t">{{t.owner_editQuota}}</text>
+    </view>
+    <input
+      class="form-input"
+      type="number"
+      value="{{adminForm.quota}}"
+      placeholder="{{t.owner_quotaPh}}"
+      placeholder-class="form-ph"
+      data-field="quota"
+      bindinput="onAdminInput"
+    />
+  </view>
+
+  <view class="form-row">
+    <view class="datetime">
+      <view class="dt-field">
+        <text class="dt-label">{{t.owner_editDeadline}}</text>
+        <picker mode="date" value="{{adminForm.date}}" bindchange="onAdminDate">
+          <view class="dt-cell">{{adminForm.date}}</view>
+        </picker>
+      </view>
+      <view class="dt-field">
+        <text class="dt-label">{{t.owner_editTime}}</text>
+        <picker mode="time" value="{{adminForm.time}}" bindchange="onAdminTime">
+          <view class="dt-cell">{{adminForm.time}}</view>
+        </picker>
+      </view>
+    </view>
+  </view>
+
+  <view class="admin-acts">
+    <view class="admin-act {{solitaire.closed ? 'admin-act-on' : ''}}" bindtap="toggleClose">
+      {{solitaire.closed ? t.owner_reopenAction : t.owner_closeAction}}
+    </view>
+  </view>
+
+  <view class="form-row">
+    <view class="form-label">
+      <text class="form-label-t">{{t.owner_transfer}}</text>
+    </view>
+    <view class="pick-list" wx:if="{{transferList.length > 0}}">
+      <view
+        class="pick-item {{adminForm.transferTo === item.id ? 'pick-on' : ''}}"
+        wx:for="{{transferList}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        data-name="{{item.name}}"
+        bindtap="pickTransfer"
+      >
+        <text class="pick-name">{{item.name}}</text>
+        <text class="pick-check" wx:if="{{adminForm.transferTo === item.id}}">✓</text>
+      </view>
+    </view>
+    <view class="pick-empty" wx:else>{{t.owner_transferEmpty}}</view>
+  </view>
+
+  <view class="sheet-actions">
+    <button class="btn btn-line" bindtap="closeAdmin">{{t.sheet_cancel}}</button>
+    <button class="btn btn-primary" hover-class="btn-hover" bindtap="submitAdmin">{{t.owner_save}}</button>
   </view>
 
   <view class="safe-bottom"></view>

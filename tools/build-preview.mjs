@@ -1,16 +1,15 @@
 /**
  * 把小程序的 wxml + wxss 渲染成一份浏览器可打开的预览页（preview.html）
- * 仅用于快速看效果，不参与小程序打包（已在 project.config.json 中 ignore）
+ * 仅用于快速看效果与验证逻辑，不参与小程序打包（已在 project.config.json 中 ignore）
  *
  * - 换算规则：小程序 750rpx = 屏宽，iPhone 6/7/8 为 375px，故 1rpx = 0.5px
- * - 语言包直接复用 utils/locales/*.js，保证预览与真机文案一致
+ * - 数据层直接复用 utils/store.js + utils/i18n.js 的真实源码（注入浏览器后运行），
+ *   页面只提供 wx 的 mock。因此预览里的权限判定与真机完全一致，不是另写一套。
  */
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createRequire } from 'node:module'
 
-const require = createRequire(import.meta.url)
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 function convertRpx(css) {
@@ -29,16 +28,27 @@ function loadCss(rel) {
 
 const appCss = loadCss('app.wxss')
 const pageCss = loadCss('pages/index/index.wxss')
-
 const appJson = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
 const navTitle = appJson.window.navigationBarTitleText || ''
 
-// 直接注入真实语言包，预览与真机共用一份文案
-const ZH = require(path.join(root, 'utils/locales/zh.js'))
-const EN = require(path.join(root, 'utils/locales/en.js'))
-const DICT_JSON = JSON.stringify({ zh: ZH, en: EN }, null, 2)
+/* 注入真实模块源码：预览与真机跑同一份数据层 */
+function embed(code) {
+  return JSON.stringify(code)
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
+}
 
-const html = `<!DOCTYPE html>
+const MODULES = {
+  store: fs.readFileSync(path.join(root, 'utils/store.js'), 'utf8'),
+  i18n: fs.readFileSync(path.join(root, 'utils/i18n.js'), 'utf8'),
+  zh: fs.readFileSync(path.join(root, 'utils/locales/zh.js'), 'utf8'),
+  en: fs.readFileSync(path.join(root, 'utils/locales/en.js'), 'utf8')
+}
+const MODULES_JSON = '{' + Object.keys(MODULES)
+  .map((k) => JSON.stringify(k) + ':' + embed(MODULES[k]))
+  .join(',') + '}'
+
+const head = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -98,23 +108,25 @@ const html = `<!DOCTYPE html>
   .phone .footer, .phone .sheet, .phone .mask { position: absolute; }
   .phone .footer { top: auto; }
 
-  .notes { width: 360px; flex-shrink: 0; color: #1F2430; }
+  .notes { width: 380px; flex-shrink: 0; color: #1F2430; }
   .notes h1 { font-size: 20px; margin: 0 0 6px; }
-  .notes .sub { font-size: 13px; color: #6B7280; margin-bottom: 22px; line-height: 1.7; }
+  .notes .sub { font-size: 13px; color: #6B7280; margin-bottom: 18px; line-height: 1.7; }
   .notes .block { background: #fff; border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(31,36,48,.06); }
   .notes h2 { font-size: 14px; margin: 0 0 10px; color: #FF6B35; }
   .notes ol { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.9; color: #374151; }
   .notes p { font-size: 13px; line-height: 1.85; color: #4B5563; margin: 0 0 8px; }
   .notes code { background: #F2F3F6; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
   .notes .warn { background: #FFF8F5; border-left: 3px solid #FF6B35; padding: 12px 14px; font-size: 12.5px; line-height: 1.8; color: #6B4A38; border-radius: 4px; }
-  .notes .row { display: flex; gap: 10px; margin-top: 10px; }
+  .notes .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .notes button {
-    padding: 9px 16px; font-size: 13px; font-weight: 600;
+    padding: 9px 14px; font-size: 13px; font-weight: 600;
     border: 1px solid #E3E6EC; background: #fff; color: #374151;
     border-radius: 20px; cursor: pointer;
   }
   .notes button:hover { background: #F7F8FA; }
   .notes button.on { background: #FF6B35; color: #fff; border-color: #FF6B35; }
+  .notes .who { font-size: 12.5px; line-height: 1.75; color: #4B5563; margin-top: 8px; }
+  .notes .who b { color: #FF6B35; }
 
 ${appCss}
 ${pageCss}
@@ -134,8 +146,29 @@ ${pageCss}
 </div>
 
 <div class="notes">
-  <h1>群接龙 · 中英双语预览</h1>
-  <div class="sub">375×812 手机壳内为真实渲染效果，样式由 <code>app.wxss</code> + <code>index.wxss</code> 按 750rpx → 375px 换算，文案来自 <code>utils/locales/</code>，与小程序完全一致。</div>
+  <h1>群接龙 · 发起人权限验证</h1>
+  <div class="sub">手机壳内跑的是<b>真实数据层</b> <code>utils/store.js</code> + <code>utils/i18n.js</code>（源码注入，只 mock 了 wx），所以这里的权限判定与真机一致，不是另写一套演示逻辑。</div>
+
+  <div class="block">
+    <h2>切换身份（重点）</h2>
+    <p>自己一个人测自己的权限永远全绿。用下面三个按钮模拟「不同手机打开同一份接龙数据」：</p>
+    <div class="row">
+      <button id="who-owner" onclick="asWho('owner')">我是创建者</button>
+      <button id="who-guest" onclick="asWho('guest')">我是陌生人</button>
+      <button id="who-joined" onclick="asWho('joined')">我是第 2 位接龙者</button>
+    </div>
+    <div class="who" id="who-desc"></div>
+  </div>
+
+  <div class="block">
+    <h2>该看到的差异</h2>
+    <ol>
+      <li>创建者：简介卡片有「你就是发起人」徽标 + 底部「管理」入口</li>
+      <li>创建者：名单里每条非自己的记录右侧有「移除」按钮</li>
+      <li>陌生人 / 普通接龙者：以上全部不出现</li>
+      <li>在管理面板里转让身份后，创建者立刻失去管理入口</li>
+    </ol>
+  </div>
 
   <div class="block">
     <h2>切换语言</h2>
@@ -148,148 +181,139 @@ ${pageCss}
   </div>
 
   <div class="block">
-    <h2>可以真点</h2>
-    <ol>
-      <li>点底部「我要接龙 / Join」→ 弹窗升起</li>
-      <li>切换「用微信昵称 / 手动填姓名」</li>
-      <li>填名字 → 确认 → 名单新增一条「我 / Me」</li>
-      <li>底部变「取消接龙 + 修改我的接龙」</li>
-    </ol>
-  </div>
-
-  <div class="block">
     <h2>说明</h2>
     <div class="warn">
       示例接龙数据（标题/姓名/备注）只在<b>首次初始化</b>时按当前语言生成；
       你自己接龙后产生的数据<b>不会被翻译</b>，这与真机行为一致。<br>
-      预览的语言选择不写入 Storage（真机里会持久化）。
+      数据存在内存，刷新即恢复初始示例。
     </div>
   </div>
 
   <div class="block">
     <h2>重置</h2>
-    <p>数据存在内存，刷新即恢复初始示例。</p>
     <div class="row"><button onclick="resetDemo()">重置演示数据</button></div>
   </div>
 </div>
 
 <script>
-var DICT = ${DICT_JSON};
+/* ============ 1. 浏览器端 wx mock ============ */
+var __mem = {};
+var wx = {
+  getStorageSync: function(k){ return Object.prototype.hasOwnProperty.call(__mem, k) ? __mem[k] : ''; },
+  setStorageSync: function(k, v){ __mem[k] = v; },
+  removeStorageSync: function(k){ delete __mem[k]; },
+  getAppBaseInfo: function(){ return { language: 'zh_CN' }; },
+  getSystemInfoSync: function(){ return { language: 'zh_CN' }; },
+  env: { USER_DATA_PATH: '/preview' },
+  getFileSystemManager: function(){ return { saveFileSync: function(){} }; }
+};
+
+/* ============ 2. 极简 CommonJS 运行时：按 basename 解析 ============ */
+var __src = ${MODULES_JSON};
+var __cache = {};
+function __norm(id){
+  var s = String(id).replace(/\\\\/g, '/');
+  var i = s.lastIndexOf('/');
+  if (i >= 0) s = s.slice(i + 1);
+  return s.replace(/\\.js$/, '');
+}
+function __require(id){
+  var key = __norm(id);
+  if (__cache[key]) return __cache[key].exports;
+  var src = __src[key];
+  if (src === undefined) throw new Error('module not found: ' + id);
+  var m = { exports: {} };
+  __cache[key] = m;
+  new Function('module', 'exports', 'require', 'wx', src)(m, m.exports, __require, wx);
+  return m.exports;
+}
+
+/* ============ 3. 起模块 ============ */
+var i18n = __require('i18n');
+var store = __require('store');
+i18n.init();
+store.bootstrap();
 
 var lang = 'zh';
-var state = null;
+var who = 'owner';
 
-function pad(n){ return n < 10 ? '0' + n : '' + n; }
+/* UI 状态：只管弹窗与表单，业务数据一律来自 store */
+var ui = {
+  showJoin: false,
+  showAdmin: false,
+  form: { name: '', avatar: '', remark: '', source: 'wechat' },
+  adminForm: { title: '', desc: '', host: '', location: '', quota: '0', date: '', time: '' }
+};
 
-function t(key, params){
-  var dict = DICT[lang] || DICT.zh;
-  var useKey = key;
-  if (params && params.n === 1 && dict[key + '_one'] !== undefined) useKey = key + '_one';
-  var v = dict[useKey];
-  if (v === undefined) v = (DICT.zh || {})[key];
-  if (v === undefined) v = key;
-  if (Array.isArray(v)) return v;
-  if (!params) return String(v);
-  return String(v).replace(/\\{(\\w+)\\}/g, function(m, name){
-    return params[name] === undefined || params[name] === null ? '' : String(params[name]);
-  });
-}
-
-function fmtTime(ts){
-  var d = new Date(ts), hh = pad(d.getHours()), mm = pad(d.getMinutes());
-  var months = t('time.months');
-  if (lang === 'en') return months[d.getMonth()] + ' ' + d.getDate() + ' ' + hh + ':' + mm;
-  return pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + hh + ':' + mm;
-}
-
-function fmtDeadline(ts){
-  var d = new Date(ts), hh = pad(d.getHours()), mm = pad(d.getMinutes());
-  var months = t('time.months'), wd = t('time.weekdays')[d.getDay()];
-  if (lang === 'en') return months[d.getMonth()] + ' ' + d.getDate() + ' ' + wd + ' ' + hh + ':' + mm;
-  return months[d.getMonth()] + d.getDate() + '日 ' + wd + ' ' + hh + ':' + mm;
-}
-
-function ddlText(ts){
-  var diff = ts - Date.now();
-  if (diff <= 0) return t('intro.closed');
-  var day = Math.floor(diff/86400000);
-  if (day >= 1) return t('intro.closesInDays', { n: day });
-  var h = Math.floor(diff/3600000);
-  if (h >= 1) return t('intro.closesInHours', { n: h });
-  return t('intro.closesInMinutes', { n: Math.max(1, Math.floor(diff/60000)) });
-}
-
-function seed(){
-  var now = Date.now();
-  var names = t('demo.names'), remarks = t('demo.remarks');
-  state = {
-    solitaire: {
-      title: t('demo.title'), desc: t('demo.desc'),
-      host: t('demo.host'), location: t('demo.location'),
-      deadlineAt: now + 7*86400000, quota: 20
-    },
-    participants: [
-      { id:'p1', name:names[0], remark:remarks[0], source:'manual', createdAt: now - 3*3600000 },
-      { id:'p2', name:names[1], remark:remarks[1], source:'wechat', createdAt: now - 2*3600000 },
-      { id:'p3', name:names[2], remark:remarks[2], source:'wechat', createdAt: now - 3600000 }
-    ],
-    myId: '', showJoin: false, editing: false, dirty: false,
-    form: { name:'', avatar:'', remark:'', source:'wechat' }, submitting: false
-  };
-}
-
-function derive(){
-  var s = state.solitaire;
-  var joined = state.participants.length;
-  var quota = Number(s.quota) || 0;
-  var left = Math.max(0, quota - joined);
-  var expired = s.deadlineAt > 0 && s.deadlineAt < Date.now();
-  var full = quota > 0 && left === 0;
-  var status = expired ? 'expired' : (full ? 'full' : 'open');
-  var map = { open: t('intro.status.open'), expired: t('intro.status.expired'), full: t('intro.status.full') };
-  return {
-    title: s.title, desc: s.desc, host: s.host, location: s.location,
-    quota: quota, joined: joined, left: left,
-    joinedText: t('intro.joined', { n: joined }),
-    quotaLeftText: quota > 0 ? t('intro.quotaLeft', { n: left }) : t('intro.quotaUnlimited'),
-    deadlineFullText: fmtDeadline(s.deadlineAt),
-    deadlineText: ddlText(s.deadlineAt),
-    status: status, statusText: map[status],
-    percent: quota > 0 ? Math.min(100, Math.round(joined/quota*100)) : 0,
-    canJoin: status === 'open'
-  };
-}
-
-function listP(){
-  return state.participants.slice().sort(function(a,b){ return a.createdAt - b.createdAt; })
-    .map(function(it, i){
-      return {
-        id: it.id, seq: i+1, name: it.name, initial: it.name ? it.name.slice(0,1) : '?',
-        avatar: it.avatar || '', source: it.source,
-        sourceText: it.source === 'wechat' ? t('list.sourceWechat') : t('list.sourceManual'),
-        remark: it.remark || '', mine: !!state.myId && it.id === state.myId,
-        timeText: fmtTime(it.createdAt)
-      };
-    });
-}
+function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+function dateOf(d){ return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function timeOf(d){ return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
 
 function esc(s){
   return String(s === undefined || s === null ? '' : s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* 当前语言的文案表：键名点转下划线，与 WXML 的 {{t.xxx}} 完全对应 */
+function M(){ return i18n.messages(); }
+
+function reloadStore(){
+  delete __cache['store'];
+  store = __require('store');
+  store.bootstrap();
+}
+
+/* ---- 切换身份：改写 Storage 里的身份键，再重载数据层 ---- */
+function asWho(next){
+  who = next;
+  var data = __mem['gs_data_v1'] || {};
+  var ownerId = (data.solitaire && data.solitaire.ownerId) || '';
+  var parts = data.participants || [];
+
+  if (next === 'owner') {
+    __mem['gs_self_v1'] = ownerId;
+    __mem['gs_mine_v1'] = '';
+  } else if (next === 'guest') {
+    __mem['gs_self_v1'] = 'u_guest_' + Date.now();
+    __mem['gs_mine_v1'] = '';
+  } else {
+    var list = parts.slice().sort(function(a, b){ return (a.createdAt||0) - (b.createdAt||0); });
+    var idx = Math.min(1, list.length - 1);
+    __mem['gs_self_v1'] = 'u_other_' + Date.now();
+    __mem['gs_mine_v1'] = idx >= 0 ? list[idx].id : '';
+  }
+  ui.showJoin = false;
+  ui.showAdmin = false;
+  reloadStore();
+  render();
+}
+
+function whoDesc(){
+  var s = store.getSolitaire();
+  var mine = null;
+  var list = store.listParticipants();
+  for (var i = 0; i < list.length; i++) { if (list[i].mine) mine = list[i]; }
+  var out = '当前身份：<b>' + (who === 'owner' ? '创建者' : (who === 'guest' ? '陌生人（未接龙）' : '第 2 位接龙者')) + '</b><br>';
+  out += 'isOwner = <b>' + (s.isOwner ? 'true' : 'false') + '</b>　';
+  out += mine ? ('我的记录：' + esc(mine.name)) : '我没有接龙记录';
+  return out;
 }
 
 var screenEl = document.getElementById('screen');
 
 function render(){
-  var sol = derive();
-  var list = listP();
+  var m = M();
+  var sol = store.getSolitaire();
+  var list = store.listParticipants();
+  var owner = store.getOwner();
   var mine = null;
-  for (var i=0;i<list.length;i++){ if (list[i].mine) mine = list[i]; }
+  for (var i = 0; i < list.length; i++) { if (list[i].mine) mine = list[i]; }
 
+  /* ---- 名单 ---- */
   var rows = '';
   if (list.length === 0) {
-    rows = '<div class="empty"><span class="empty-t">' + esc(t('list.emptyTitle')) + '</span>'
-         + '<span class="empty-s">' + esc(t('list.emptySub')) + '</span></div>';
+    rows = '<div class="empty"><span class="empty-t">' + esc(m.list_emptyTitle) + '</span>'
+         + '<span class="empty-s">' + esc(m.list_emptySub) + '</span></div>';
   } else {
     list.forEach(function(it){
       rows += '<div class="p-item">'
@@ -300,69 +324,165 @@ function render(){
         +   '<div class="p-main">'
         +     '<div class="p-line">'
         +       '<span class="p-name">' + esc(it.name) + '</span>'
-        +       (it.mine ? '<span class="p-mine">' + esc(t('list.mine')) + '</span>' : '')
+        +       (it.mine ? '<span class="p-mine">' + esc(m.list_mine) + '</span>' : '')
+        +       (it.isOwner ? '<span class="p-owner">' + esc(m.intro_host) + '</span>' : '')
         +       '<span class="p-src p-src-' + it.source + '">' + esc(it.sourceText) + '</span>'
         +     '</div>'
         +     (it.remark ? '<div class="p-remark">' + esc(it.remark) + '</div>' : '')
         +     '<div class="p-time">' + it.timeText + '</div>'
         +   '</div>'
+        +   (sol.isOwner && !it.mine
+            ? '<div class="p-remove" data-act="remove" data-id="' + esc(it.id) + '" data-name="' + esc(it.name) + '">' + esc(m.owner_remove) + '</div>'
+            : '')
         + '</div>';
     });
   }
 
+  /* ---- 简介卡片 ---- */
+  var intro = ''
+    + '<div class="card intro">'
+    +   '<div class="intro-head">'
+    +     '<span class="intro-title">' + esc(sol.title) + '</span>'
+    +     '<span class="status status-' + sol.status + '">' + esc(sol.statusText) + '</span>'
+    +   '</div>'
+    +   (sol.isOwner ? '<div class="owner-badge">' + esc(m.owner_badge) + '</div>' : '')
+    +   '<div class="intro-desc">' + esc(sol.desc) + '</div>'
+    +   '<div class="meta">'
+    +     '<div class="meta-item"><span class="meta-k">' + esc(m.intro_host) + '</span><span class="meta-v">' + esc(sol.host) + '</span></div>'
+    +     '<div class="meta-item"><span class="meta-k">' + esc(m.intro_location) + '</span><span class="meta-v">' + esc(sol.location) + '</span></div>'
+    +     '<div class="meta-item"><span class="meta-k">' + esc(m.intro_deadline) + '</span><span class="meta-v">' + esc(sol.deadlineFullText) + '</span></div>'
+    +   '</div>'
+    +   '<div class="progress-wrap">'
+    +     '<div class="progress-top">'
+    +       '<span class="progress-label">' + esc(sol.joinedText) + '</span>'
+    +       '<span class="progress-left">' + esc(sol.quotaLeftText) + '</span>'
+    +     '</div>'
+    +     (sol.quota > 0 ? '<div class="progress-bar"><div class="progress-inner" style="width:' + sol.percent + '%"></div></div>' : '')
+    +     '<div class="deadline-tip">' + esc(sol.deadlineText) + '</div>'
+    +   '</div>'
+    +   (sol.isOwner
+        ? '<div class="owner-entry" data-act="openadmin"><span class="owner-entry-t">' + esc(m.owner_manage) + '</span><span class="owner-entry-arrow">&rsaquo;</span></div>'
+        : '')
+    + '</div>';
+
   var footer = ''
     + '<div class="footer">'
-    +   (mine ? '<div class="footer-tip">' + esc(t('footer.tip', { n: mine.seq })) + '</div>' : '')
+    +   (mine ? '<div class="footer-tip">' + esc(m.footer_tip).replace('{n}', mine.seq) + '</div>' : '')
     +   '<div class="footer-inner">'
-    +     (mine ? '<button class="btn btn-line btn-flex" data-act="cancel">' + esc(t('footer.cancel')) + '</button>' : '')
-    +     (sol.canJoin ? '<button class="btn btn-primary btn-flex" data-act="open">' + esc(mine ? t('footer.edit') : t('footer.join')) + '</button>' : '')
+    +     (mine ? '<button class="btn btn-line btn-flex" data-act="cancel">' + esc(m.footer_cancel) + '</button>' : '')
+    +     (sol.canJoin ? '<button class="btn btn-primary btn-flex" data-act="openjoin">' + esc(mine ? m.footer_edit : m.footer_join) + '</button>' : '')
     +     (!sol.canJoin && !mine ? '<button class="btn btn-disabled btn-flex" disabled>' + esc(sol.statusText) + '</button>' : '')
     +   '</div>'
     +   '<div class="safe-bottom"></div>'
     + '</div>';
 
-  var sheet = '';
-  if (state.showJoin) {
-    var f = state.form;
-    var initial = f.name ? f.name.slice(0,1) : '?';
-    sheet = ''
-      + '<div class="mask" data-act="close"></div>'
+  var joinSheet = '';
+  if (ui.showJoin) {
+    var f = ui.form;
+    joinSheet = ''
+      + '<div class="mask" data-act="closejoin"></div>'
       + '<div class="sheet sheet-in">'
       +   '<div class="sheet-head">'
-      +     '<span class="sheet-title">' + esc(t('sheet.title')) + '</span>'
-      +     '<span class="sheet-close" data-act="close">×</span>'
+      +     '<span class="sheet-title">' + esc(m.sheet_title) + '</span>'
+      +     '<span class="sheet-close" data-act="closejoin">&times;</span>'
       +   '</div>'
       +   '<div class="form-row avatar-row">'
       +     '<button class="avatar-btn" data-act="avatar">'
-      +       (f.avatar ? '<img class="avatar-img" src="' + esc(f.avatar) + '">' : '<span class="avatar-txt">' + esc(initial) + '</span>')
+      +       '<span class="avatar-txt">' + esc(f.name ? f.name.slice(0, 1) : '?') + '</span>'
       +     '</button>'
       +     '<div class="avatar-tip">'
-      +       '<span class="avatar-tip-t">' + esc(t('sheet.avatarTitle')) + '</span>'
-      +       '<span class="avatar-tip-s">' + esc(t('sheet.avatarSub')) + '</span>'
+      +       '<span class="avatar-tip-t">' + esc(m.sheet_avatarTitle) + '</span>'
+      +       '<span class="avatar-tip-s">' + esc(m.sheet_avatarSub) + '</span>'
       +     '</div>'
       +   '</div>'
       +   '<div class="form-row">'
-      +     '<div class="form-label"><span class="form-label-t">' + esc(t('sheet.name')) + '</span><span class="form-label-s">' + esc(t('sheet.required')) + '</span></div>'
+      +     '<div class="form-label"><span class="form-label-t">' + esc(m.sheet_name) + '</span><span class="form-label-s">' + esc(m.sheet_required) + '</span></div>'
       +     '<div class="seg">'
-      +       '<div class="seg-item ' + (f.source==='wechat'?'seg-on':'') + '" data-act="src" data-source="wechat">' + esc(t('sheet.tabWechat')) + '</div>'
-      +       '<div class="seg-item ' + (f.source==='manual'?'seg-on':'') + '" data-act="src" data-source="manual">' + esc(t('sheet.tabManual')) + '</div>'
+      +       '<div class="seg-item ' + (f.source === 'wechat' ? 'seg-on' : '') + '" data-act="src" data-source="wechat">' + esc(m.sheet_tabWechat) + '</div>'
+      +       '<div class="seg-item ' + (f.source === 'manual' ? 'seg-on' : '') + '" data-act="src" data-source="manual">' + esc(m.sheet_tabManual) + '</div>'
       +     '</div>'
       +     (f.source === 'wechat'
-      +       ? '<div class="quick" data-act="fillname">'
-      +           '<span class="quick-t">' + esc(t('sheet.quickTitle')) + '</span>'
-      +           '<span class="quick-s">' + esc(t('sheet.quickSub')) + '</span>'
-      +         '</div>'
-      +       : '')
-      +     '<input class="form-input" id="f-name" value="' + esc(f.name) + '" maxlength="20" placeholder="' + esc(f.source==='wechat'?t('sheet.namePhWechat'):t('sheet.namePhManual')) + '">'
-      +     '<div class="form-hint">' + esc(f.source==='wechat' ? t('sheet.hintWechat') : t('sheet.hintManual')) + '</div>'
+              ? '<div class="quick" data-act="fillname"><span class="quick-t">' + esc(m.sheet_quickTitle) + '</span><span class="quick-s">' + esc(m.sheet_quickSub) + '</span></div>'
+              : '')
+      +     '<input class="form-input" id="f-name" value="' + esc(f.name) + '" maxlength="20" placeholder="' + esc(f.source === 'wechat' ? m.sheet_namePhWechat : m.sheet_namePhManual) + '">'
+      +     '<div class="form-hint">' + esc(f.source === 'wechat' ? m.sheet_hintWechat : m.sheet_hintManual) + '</div>'
       +   '</div>'
       +   '<div class="form-row">'
-      +     '<div class="form-label"><span class="form-label-t">' + esc(t('sheet.remark')) + '</span><span class="form-label-s">' + esc(t('sheet.optional')) + '</span></div>'
-      +     '<input class="form-input" id="f-remark" value="' + esc(f.remark) + '" maxlength="60" placeholder="' + esc(t('sheet.remarkPh')) + '">'
+      +     '<div class="form-label"><span class="form-label-t">' + esc(m.sheet_remark) + '</span><span class="form-label-s">' + esc(m.sheet_optional) + '</span></div>'
+      +     '<input class="form-input" id="f-remark" value="' + esc(f.remark) + '" maxlength="60" placeholder="' + esc(m.sheet_remarkPh) + '">'
       +   '</div>'
       +   '<div class="sheet-actions">'
-      +     '<button class="btn btn-line" data-act="close">' + esc(t('sheet.cancel')) + '</button>'
-      +     '<button class="btn btn-primary" data-act="submit">' + esc(t('sheet.submit')) + '</button>'
+      +     '<button class="btn btn-line" data-act="closejoin">' + esc(m.sheet_cancel) + '</button>'
+      +     '<button class="btn btn-primary" data-act="submitjoin">' + esc(m.sheet_submit) + '</button>'
+      +   '</div>'
+      +   '<div class="safe-bottom"></div>'
+      + '</div>';
+  }
+
+  var adminSheet = '';
+  if (ui.showAdmin) {
+    var a = ui.adminForm;
+    var mineId = mine ? mine.id : '';
+    var picks = '';
+    var n = 0;
+    list.forEach(function(it){
+      if (it.id === mineId) return;
+      n += 1;
+      picks += '<div class="pick-item" data-act="transfer" data-id="' + esc(it.id) + '" data-name="' + esc(it.name) + '">'
+        + '<span class="pick-name">' + esc(it.name) + '</span></div>';
+    });
+    adminSheet = ''
+      + '<div class="mask" data-act="closeadmin"></div>'
+      + '<div class="sheet sheet-in">'
+      +   '<div class="sheet-head">'
+      +     '<span class="sheet-title">' + esc(m.owner_panelTitle) + '</span>'
+      +     '<span class="sheet-close" data-act="closeadmin">&times;</span>'
+      +   '</div>'
+      +   '<div class="sheet-sub">' + esc(m.owner_panelSub) + '</div>'
+      +   '<div class="form-row">'
+      +     '<div class="form-label"><span class="form-label-t">' + esc(m.owner_editTitle) + '</span></div>'
+      +     '<input class="form-input" id="a-title" value="' + esc(a.title) + '" maxlength="60">'
+      +   '</div>'
+      +   '<div class="form-row">'
+      +     '<div class="form-label"><span class="form-label-t">' + esc(m.owner_editDesc) + '</span></div>'
+      +     '<textarea class="form-area" id="a-desc" maxlength="200">' + esc(a.desc) + '</textarea>'
+      +   '</div>'
+      +   '<div class="form-row">'
+      +     '<div class="form-label"><span class="form-label-t">' + esc(m.intro_host) + '</span></div>'
+      +     '<input class="form-input" id="a-host" value="' + esc(a.host) + '" maxlength="20">'
+      +   '</div>'
+      +   '<div class="form-row">'
+      +     '<div class="form-label"><span class="form-label-t">' + esc(m.intro_location) + '</span></div>'
+      +     '<input class="form-input" id="a-location" value="' + esc(a.location) + '" maxlength="60">'
+      +   '</div>'
+      +   '<div class="form-row">'
+      +     '<div class="form-label"><span class="form-label-t">' + esc(m.owner_editQuota) + '</span></div>'
+      +     '<input class="form-input" id="a-quota" type="number" value="' + esc(a.quota) + '" placeholder="' + esc(m.owner_quotaPh) + '">'
+      +   '</div>'
+      +   '<div class="form-row">'
+      +     '<div class="datetime">'
+      +       '<div class="dt-field">'
+      +         '<span class="dt-label">' + esc(m.owner_editDeadline) + '</span>'
+      +         '<input class="dt-cell" id="a-date" type="date" value="' + esc(a.date) + '">'
+      +       '</div>'
+      +       '<div class="dt-field">'
+      +         '<span class="dt-label">' + esc(m.owner_editTime) + '</span>'
+      +         '<input class="dt-cell" id="a-time" type="time" value="' + esc(a.time) + '">'
+      +       '</div>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div class="admin-acts">'
+      +     '<div class="admin-act ' + (sol.closed ? 'admin-act-on' : '') + '" data-act="toggleclose">'
+      +       esc(sol.closed ? m.owner_reopenAction : m.owner_closeAction)
+      +     '</div>'
+      +   '</div>'
+      +   '<div class="form-row">'
+      +     '<div class="form-label"><span class="form-label-t">' + esc(m.owner_transfer) + '</span></div>'
+      +     (n > 0 ? '<div class="pick-list">' + picks + '</div>' : '<div class="pick-empty">' + esc(m.owner_transferEmpty) + '</div>')
+      +   '</div>'
+      +   '<div class="sheet-actions">'
+      +     '<button class="btn btn-line" data-act="closeadmin">' + esc(m.sheet_cancel) + '</button>'
+      +     '<button class="btn btn-primary" data-act="submitadmin">' + esc(m.owner_save) + '</button>'
       +   '</div>'
       +   '<div class="safe-bottom"></div>'
       + '</div>';
@@ -371,46 +491,32 @@ function render(){
   screenEl.innerHTML = ''
     + '<div class="page">'
     +   '<div class="langbar">'
-    +     '<span class="langbar-label">' + esc(t('lang.label')) + '</span>'
+    +     '<span class="langbar-label">' + esc(m.lang_label) + '</span>'
     +     '<div class="lang-btn" data-act="switchlang">'
     +       '<span class="lang-btn-cur">' + (lang === 'zh' ? '中文' : 'English') + '</span>'
-    +       '<span class="lang-btn-arrow">⇄</span>'
-    +       '<span class="lang-btn-next">' + esc(t('lang.switchTo')) + '</span>'
+    +       '<span class="lang-btn-arrow">&#8644;</span>'
+    +       '<span class="lang-btn-next">' + esc(m.lang_switchTo) + '</span>'
     +     '</div>'
     +   '</div>'
-    +   '<div class="card intro">'
-    +     '<div class="intro-head">'
-    +       '<span class="intro-title">' + esc(sol.title) + '</span>'
-    +       '<span class="status status-' + sol.status + '">' + esc(sol.statusText) + '</span>'
-    +     '</div>'
-    +     '<div class="intro-desc">' + esc(sol.desc) + '</div>'
-    +     '<div class="meta">'
-    +       '<div class="meta-item"><span class="meta-k">' + esc(t('intro.host')) + '</span><span class="meta-v">' + esc(sol.host) + '</span></div>'
-    +       '<div class="meta-item"><span class="meta-k">' + esc(t('intro.location')) + '</span><span class="meta-v">' + esc(sol.location) + '</span></div>'
-    +       '<div class="meta-item"><span class="meta-k">' + esc(t('intro.deadline')) + '</span><span class="meta-v">' + esc(sol.deadlineFullText) + '</span></div>'
-    +     '</div>'
-    +     '<div class="progress-wrap">'
-    +       '<div class="progress-top">'
-    +         '<span class="progress-label">' + esc(sol.joinedText) + '</span>'
-    +         '<span class="progress-left">' + esc(sol.quotaLeftText) + '</span>'
-    +       '</div>'
-    +       (sol.quota > 0 ? '<div class="progress-bar"><div class="progress-inner" style="width:' + sol.percent + '%"></div></div>' : '')
-    +       '<div class="deadline-tip">' + esc(sol.deadlineText) + '</div>'
-    +     '</div>'
-    +   '</div>'
+    +   intro
     +   '<div class="sec-title">'
-    +     '<div class="left"><span class="bar"></span><span class="t">' + esc(t('list.title')) + '</span></div>'
-    +     '<span class="count">' + esc(t('list.count', { n: sol.joined })) + '</span>'
+    +     '<div class="left"><span class="bar"></span><span class="t">' + esc(m.list_title) + '</span></div>'
+    +     '<span class="count">' + esc(m.list_count).replace('{n}', sol.joined) + '</span>'
     +   '</div>'
     +   '<div class="card list-card">' + rows + '</div>'
     +   '<div class="foot-space"></div>'
     + '</div>'
     + footer
-    + sheet;
+    + joinSheet
+    + adminSheet;
 
-  document.getElementById('nav-title').textContent = t('app.name');
+  document.getElementById('nav-title').textContent = m.app_name;
   document.getElementById('btn-zh').className = lang === 'zh' ? 'on' : '';
   document.getElementById('btn-en').className = lang === 'en' ? 'on' : '';
+  document.getElementById('who-owner').className = who === 'owner' ? 'on' : '';
+  document.getElementById('who-guest').className = who === 'guest' ? 'on' : '';
+  document.getElementById('who-joined').className = who === 'joined' ? 'on' : '';
+  document.getElementById('who-desc').innerHTML = whoDesc();
   bind();
 }
 
@@ -419,54 +525,114 @@ function bind(){
     el.addEventListener('click', function(e){ e.stopPropagation(); onAct(el.getAttribute('data-act'), el); });
   });
   var name = document.getElementById('f-name');
-  if (name) name.addEventListener('input', function(e){ state.form.name = e.target.value; syncAvatar(); });
+  if (name) name.addEventListener('input', function(e){ ui.form.name = e.target.value; });
   var remark = document.getElementById('f-remark');
-  if (remark) remark.addEventListener('input', function(e){ state.form.remark = e.target.value; });
-}
-
-function syncAvatar(){
-  var box = screenEl.querySelector('.avatar-txt');
-  if (box && !state.form.avatar) box.textContent = state.form.name ? state.form.name.slice(0,1) : '?';
+  if (remark) remark.addEventListener('input', function(e){ ui.form.remark = e.target.value; });
 }
 
 function onAct(act, el){
+  var m = M();
   if (act === 'switchlang') { setLang(lang === 'zh' ? 'en' : 'zh'); return; }
-  if (act === 'open') {
-    var mine = state.participants.filter(function(p){ return p.id === state.myId; })[0];
-    state.editing = !!mine;
-    state.form = mine
+
+  if (act === 'openjoin') {
+    var mine = null, list = store.listParticipants();
+    for (var i = 0; i < list.length; i++) { if (list[i].mine) mine = list[i]; }
+    ui.form = mine
       ? { name: mine.name, avatar: mine.avatar || '', remark: mine.remark || '', source: mine.source }
-      : { name:'', avatar:'', remark:'', source:'wechat' };
-    state.showJoin = true;
+      : { name: '', avatar: '', remark: '', source: 'wechat' };
+    ui.showJoin = true;
     render();
     return;
   }
-  if (act === 'close') { state.showJoin = false; render(); return; }
-  if (act === 'src') { state.form.source = el.getAttribute('data-source'); render(); return; }
-  if (act === 'avatar') { state.form.avatar = ''; flash('真机中点这里会拉起微信头像选择'); return; }
+  if (act === 'closejoin') { ui.showJoin = false; render(); return; }
+  if (act === 'src') { ui.form.source = el.getAttribute('data-source'); render(); return; }
+  if (act === 'avatar') { flash('真机中点这里会拉起微信头像选择'); return; }
   if (act === 'fillname') {
-    var el2 = document.getElementById('f-name');
-    if (el2) el2.focus();
+    var box = document.getElementById('f-name');
+    if (box) box.focus();
     flash('真机中键盘上方会显示你的微信昵称，点一下即填入');
     return;
   }
   if (act === 'cancel') {
-    state.participants = state.participants.filter(function(p){ return p.id !== state.myId; });
-    state.myId = ''; state.dirty = true; render(); return;
+    var mine2 = null, l2 = store.listParticipants();
+    for (var j = 0; j < l2.length; j++) { if (l2[j].mine) mine2 = l2[j]; }
+    if (mine2) { var r0 = store.removeParticipant(mine2.id); flash(r0.ok ? m.msg_cancelled : (r0.msg || m.err_generic)); }
+    render();
+    return;
   }
-  if (act === 'submit') {
-    var name = (state.form.name || '').replace(/^\\s+|\\s+$/g,'');
-    if (!name) { flash(lang === 'zh' ? '请填写名称' : 'Please enter a name'); return; }
-    if (state.editing) {
-      var hit = state.participants.filter(function(p){ return p.id === state.myId; })[0];
-      if (hit) { hit.name = name; hit.remark = state.form.remark; hit.source = state.form.source; }
-    } else {
-      var id = 'p' + Date.now();
-      state.participants.push({ id: id, name: name, avatar: state.form.avatar, source: state.form.source, remark: state.form.remark, createdAt: Date.now() });
-      state.myId = id;
-    }
-    state.dirty = true;
-    state.showJoin = false;
+  if (act === 'submitjoin') {
+    var name = String(ui.form.name || '').replace(/^\\s+|\\s+$/g, '');
+    if (!name) { flash(m.msg_nameRequired); return; }
+    var mine3 = null, l3 = store.listParticipants();
+    for (var k = 0; k < l3.length; k++) { if (l3[k].mine) mine3 = l3[k]; }
+    var r = mine3
+      ? store.updateParticipant(mine3.id, { name: name, avatar: ui.form.avatar, remark: ui.form.remark, source: ui.form.source })
+      : store.addParticipant({ name: name, avatar: ui.form.avatar, remark: ui.form.remark, source: ui.form.source });
+    if (!r.ok) { flash(r.msg || m.err_generic); return; }
+    ui.showJoin = false;
+    flash(mine3 ? m.msg_updated : m.msg_joined);
+    render();
+    return;
+  }
+
+  /* ---- 发起人管理 ---- */
+  if (act === 'openadmin') {
+    var s = store.getSolitaire();
+    var d = new Date(s.deadlineAt || Date.now());
+    ui.adminForm = {
+      title: s.title || '', desc: s.desc || '', host: s.host || '', location: s.location || '',
+      quota: String(s.quota || 0), date: dateOf(d), time: timeOf(d)
+    };
+    ui.showAdmin = true;
+    render();
+    return;
+  }
+  if (act === 'closeadmin') { ui.showAdmin = false; render(); return; }
+
+  if (act === 'submitadmin') {
+    var dp = String(document.getElementById('a-date').value || '').split('-');
+    var tp = String(document.getElementById('a-time').value || '').split(':');
+    var dt = new Date(
+      Number(dp[0]) || 1970, (Number(dp[1]) || 1) - 1, Number(dp[2]) || 1,
+      Number(tp[0]) || 0, Number(tp[1]) || 0, 0, 0
+    );
+    var res = store.updateSolitaire({
+      title: document.getElementById('a-title').value,
+      desc: document.getElementById('a-desc').value,
+      host: document.getElementById('a-host').value,
+      location: document.getElementById('a-location').value,
+      quota: Number(document.getElementById('a-quota').value),
+      deadlineAt: dt.getTime()
+    });
+    if (!res.ok) { flash(res.msg || m.err_generic); return; }
+    ui.showAdmin = false;
+    flash(m.owner_updatedToast);
+    render();
+    return;
+  }
+
+  if (act === 'toggleclose') {
+    var closed = store.getSolitaire().closed;
+    var rc = store.updateSolitaire({ closed: !closed });
+    if (!rc.ok) { flash(rc.msg || m.err_generic); return; }
+    flash(closed ? m.owner_reopenedToast : m.owner_closedToast);
+    render();
+    return;
+  }
+
+  if (act === 'remove') {
+    var rr = store.removeParticipant(el.getAttribute('data-id'));
+    flash(rr.ok ? m.owner_removedToast : (rr.msg || m.err_cancelFailed));
+    render();
+    return;
+  }
+
+  if (act === 'transfer') {
+    var nm = el.getAttribute('data-name');
+    var rt = store.transferOwner(el.getAttribute('data-id'));
+    if (!rt.ok) { flash(rt.msg || m.err_generic); return; }
+    ui.showAdmin = false;
+    flash(m.owner_transferredToast + ' → ' + nm);
     render();
     return;
   }
@@ -478,34 +644,41 @@ function flash(msg){
   if (old) old.remove();
   var el = document.createElement('div');
   el.id = 'toast'; el.textContent = msg;
-  el.style.cssText = 'position:absolute;left:50%;bottom:120px;transform:translateX(-50%);background:rgba(17,21,28,.85);color:#fff;font-size:12px;padding:9px 16px;border-radius:16px;z-index:999;';
+  el.style.cssText = 'position:absolute;left:50%;bottom:120px;transform:translateX(-50%);background:rgba(17,21,28,.85);color:#fff;font-size:12px;padding:9px 16px;border-radius:16px;z-index:999;max-width:300px;text-align:center;';
   document.querySelector('.phone').appendChild(el);
   clearTimeout(timer);
-  timer = setTimeout(function(){ el.remove(); }, 1600);
+  timer = setTimeout(function(){ el.remove(); }, 1800);
 }
 
 function setLang(next){
   if (next !== 'zh' && next !== 'en') return;
-  if (next === lang) return;
   lang = next;
-  // 示例数据只在没被改动过时随语言重新生成（用户数据不翻译）
-  if (state && !state.dirty) seed();
+  i18n.setLang(next);
   render();
 }
 
-function resetDemo(){ seed(); render(); }
+function resetDemo(){
+  __mem = {};
+  who = 'owner';
+  ui.showJoin = false;
+  ui.showAdmin = false;
+  delete __cache['store'];
+  store = __require('store');
+  i18n.init();
+  store.bootstrap();
+  render();
+}
 
-seed();
-render();
+asWho('owner');
 
 (function(){
   var d = new Date();
-  document.getElementById('clock').textContent = d.getHours() + ':' + pad(d.getMinutes());
+  document.getElementById('clock').textContent = d.getHours() + ':' + pad2(d.getMinutes());
 })();
 </script>
 </body>
 </html>
 `
 
-fs.writeFileSync(path.join(root, 'preview.html'), html, 'utf8')
-console.log('已生成 preview.html  (' + html.length + ' 字节)')
+fs.writeFileSync(path.join(root, 'preview.html'), head, 'utf8')
+console.log('已生成 preview.html  (' + head.length + ' 字节)  —— 数据层复用 utils/store.js')

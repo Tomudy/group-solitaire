@@ -559,3 +559,184 @@
 .sheet-actions .btn-primary {
   flex: 1;
 }
+
+/* ==================== 发起人身份标识 ==================== */
+.owner-badge {
+  display: inline-block;
+  margin-top: 16rpx;
+  padding: 6rpx 18rpx;
+  border-radius: 22rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: #FF6B35;
+}
+
+/* 管理入口：整行可点，箭头靠右 */
+.owner-entry {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 22rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #F0F1F4;
+}
+
+.owner-entry-t {
+  font-size: 27rpx;
+  font-weight: 600;
+  color: #FF6B35;
+}
+
+.owner-entry-arrow {
+  font-size: 32rpx;
+  color: #C6CBD4;
+}
+
+/* ==================== 名单 · 发起人徽标与移除按钮 ==================== */
+.p-owner {
+  margin-left: 10rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  font-size: 19rpx;
+  font-weight: 600;
+  color: #7A5CFF;
+  background: #F0EDFF;
+}
+
+.p-remove {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  padding: 8rpx 20rpx;
+  border-radius: 24rpx;
+  font-size: 22rpx;
+  color: #E5484D;
+  background: #FDEDED;
+}
+
+/* ==================== 管理弹窗 ==================== */
+.sheet-sub {
+  padding-bottom: 10rpx;
+  font-size: 23rpx;
+  line-height: 1.6;
+  color: #9AA1AE;
+}
+
+.form-area {
+  margin-top: 14rpx;
+  width: 100%;
+  min-height: 150rpx;
+  padding: 20rpx 24rpx;
+  background: #F7F8FA;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  line-height: 1.55;
+  color: #1F2430;
+}
+
+/* 日期与时间并排：两个 picker 等宽，英文日期也不会挤在一起 */
+.datetime {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 14rpx;
+}
+
+.dt-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.dt-field:first-child {
+  margin-right: 16rpx;
+}
+
+.dt-label {
+  display: block;
+  margin-bottom: 10rpx;
+  font-size: 22rpx;
+  color: #9AA1AE;
+}
+
+.dt-cell {
+  height: 88rpx;
+  line-height: 88rpx;
+  padding: 0 24rpx;
+  background: #F7F8FA;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #1F2430;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-acts {
+  padding: 10rpx 0 6rpx;
+}
+
+.admin-act {
+  height: 80rpx;
+  line-height: 80rpx;
+  text-align: center;
+  border-radius: 12rpx;
+  font-size: 27rpx;
+  font-weight: 600;
+  color: #E5484D;
+  background: #FDEDED;
+}
+
+.admin-act-on {
+  color: #2FBF71;
+  background: #E8F7EF;
+}
+
+/* ==================== 转让选人 ==================== */
+.pick-list {
+  margin-top: 14rpx;
+}
+
+.pick-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: 84rpx;
+  padding: 0 24rpx;
+  margin-bottom: 12rpx;
+  background: #F7F8FA;
+  border-radius: 12rpx;
+}
+
+.pick-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
+  color: #1F2430;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pick-check {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #FF6B35;
+}
+
+.pick-on {
+  background: #FFF1EB;
+}
+
+.pick-empty {
+  margin-top: 14rpx;
+  padding: 28rpx 24rpx;
+  background: #F7F8FA;
+  border-radius: 12rpx;
+  font-size: 25rpx;
+  color: #B4BAC4;
+  text-align: center;
+}
