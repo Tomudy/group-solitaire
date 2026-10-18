@@ -1,0 +1,39 @@
+{
+  "description": "群接龙小程序",
+  "miniprogramRoot": "./",
+  "compileType": "miniprogram",
+  "appid": "wxc925c213bfde630e",
+  "projectname": "group-solitaire",
+  "libVersion": "latest",
+  "packOptions": {
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "tests"
+      },
+      {
+        "type": "folder",
+        "value": "tools"
+      },
+      {
+        "type": "file",
+        "value": "preview.html"
+      }
+    ],
+    "include": []
+  },
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "coverView": true,
+    "showShadowRootInWxmlPanel": true,
+    "packNpmManually": false,
+    "packNpmRelationList": []
+  },
+  "compileOptions": {
+    "compileWorklet": false
+  }
+}

@@ -1,0 +1,187 @@
+<view class="page">
+
+  <!-- ================= 语言切换 ================= -->
+  <view class="langbar">
+    <text class="langbar-label">{{t.lang_label}}</text>
+    <view class="lang-btn" hover-class="lang-btn-hover" bindtap="switchLang">
+      <text class="lang-btn-cur">{{lang === 'zh' ? '中文' : 'English'}}</text>
+      <text class="lang-btn-arrow">⇄</text>
+      <text class="lang-btn-next">{{t.lang_switchTo}}</text>
+    </view>
+  </view>
+
+  <!-- ================= 接龙简介 ================= -->
+  <view class="card intro">
+    <view class="intro-head">
+      <text class="intro-title">{{solitaire.title}}</text>
+      <view class="status status-{{solitaire.status}}">{{solitaire.statusText}}</view>
+    </view>
+
+    <view class="intro-desc">{{solitaire.desc}}</view>
+
+    <view class="meta">
+      <view class="meta-item">
+        <text class="meta-k">{{t.intro_host}}</text>
+        <text class="meta-v">{{solitaire.host}}</text>
+      </view>
+      <view class="meta-item">
+        <text class="meta-k">{{t.intro_location}}</text>
+        <text class="meta-v">{{solitaire.location}}</text>
+      </view>
+      <view class="meta-item">
+        <text class="meta-k">{{t.intro_deadline}}</text>
+        <text class="meta-v">{{solitaire.deadlineFullText}}</text>
+      </view>
+    </view>
+
+    <view class="progress-wrap">
+      <view class="progress-top">
+        <text class="progress-label">{{solitaire.joinedText}}</text>
+        <text class="progress-left">{{solitaire.quotaLeftText}}</text>
+      </view>
+      <view class="progress-bar" wx:if="{{solitaire.quota > 0}}">
+        <view class="progress-inner" style="width:{{solitaire.percent}}%"></view>
+      </view>
+      <view class="deadline-tip">{{solitaire.deadlineText}}</view>
+    </view>
+  </view>
+
+  <!-- ================= 接龙者名单 ================= -->
+  <view class="sec-title">
+    <view class="left">
+      <view class="bar"></view>
+      <text class="t">{{t.list_title}}</text>
+    </view>
+    <text class="count">{{countText}}</text>
+  </view>
+
+  <view class="card list-card">
+    <block wx:if="{{participants.length > 0}}">
+      <view class="p-item" wx:for="{{participants}}" wx:key="id">
+        <view class="p-seq">{{item.seq}}</view>
+
+        <view class="p-avatar">
+          <image class="p-avatar-img" src="{{item.avatar}}" mode="aspectFill" wx:if="{{item.avatar}}"></image>
+          <text class="p-avatar-txt" wx:else>{{item.initial}}</text>
+        </view>
+
+        <view class="p-main">
+          <view class="p-line">
+            <text class="p-name">{{item.name}}</text>
+            <view class="p-mine" wx:if="{{item.mine}}">{{t.list_mine}}</view>
+            <view class="p-src p-src-{{item.source}}">{{item.sourceText}}</view>
+          </view>
+          <view class="p-remark" wx:if="{{item.remark}}">{{item.remark}}</view>
+          <view class="p-time">{{item.timeText}}</view>
+        </view>
+      </view>
+    </block>
+
+    <view class="empty" wx:else>
+      <text class="empty-t">{{t.list_emptyTitle}}</text>
+      <text class="empty-s">{{t.list_emptySub}}</text>
+    </view>
+  </view>
+
+  <view class="foot-space"></view>
+</view>
+
+<!-- ================= 底部操作栏 ================= -->
+<view class="footer">
+  <view class="footer-tip" wx:if="{{mine}}">{{footerTipText}}</view>
+  <view class="footer-inner">
+    <button class="btn btn-line btn-flex" wx:if="{{mine}}" bindtap="cancelMine">{{t.footer_cancel}}</button>
+    <button
+      class="btn btn-primary btn-flex"
+      hover-class="btn-hover"
+      wx:if="{{solitaire.canJoin}}"
+      bindtap="openJoin"
+    >{{mine ? t.footer_edit : t.footer_join}}</button>
+    <button class="btn btn-disabled btn-flex" wx:if="{{!solitaire.canJoin && !mine}}" disabled="true">{{solitaire.statusText}}</button>
+  </view>
+  <view class="safe-bottom"></view>
+</view>
+
+<!-- ================= 接龙弹窗 ================= -->
+<view class="mask" wx:if="{{showJoin}}" bindtap="closeJoin"></view>
+<view class="sheet {{showJoin ? 'sheet-in' : ''}}" wx:if="{{showJoin}}">
+  <view class="sheet-head">
+    <text class="sheet-title">{{t.sheet_title}}</text>
+    <view class="sheet-close" bindtap="closeJoin">×</view>
+  </view>
+
+  <!-- 头像：open-type=chooseAvatar 走官方头像选择能力 -->
+  <view class="form-row avatar-row">
+    <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+      <image class="avatar-img" src="{{form.avatar}}" mode="aspectFill" wx:if="{{form.avatar}}"></image>
+      <text class="avatar-txt" wx:else>{{formInitial}}</text>
+    </button>
+    <view class="avatar-tip">
+      <text class="avatar-tip-t">{{t.sheet_avatarTitle}}</text>
+      <text class="avatar-tip-s">{{t.sheet_avatarSub}}</text>
+    </view>
+  </view>
+
+  <!-- 名称来源：微信昵称 / 手动填写，选中微信昵称时输入框唤起官方昵称键盘 -->
+  <view class="form-row">
+    <view class="form-label">
+      <text class="form-label-t">{{t.sheet_name}}</text>
+      <text class="form-label-s">{{t.sheet_required}}</text>
+    </view>
+
+    <view class="seg">
+      <view
+        class="seg-item {{form.source === 'wechat' ? 'seg-on' : ''}}"
+        data-source="wechat"
+        bindtap="switchSource"
+      >{{t.sheet_tabWechat}}</view>
+      <view
+        class="seg-item {{form.source === 'manual' ? 'seg-on' : ''}}"
+        data-source="manual"
+        bindtap="switchSource"
+      >{{t.sheet_tabManual}}</view>
+    </view>
+
+    <!-- 一键填入：唤起微信官方昵称键盘，键盘上方直接显示你的微信昵称，点一下即填入 -->
+    <view class="quick" wx:if="{{form.source === 'wechat'}}" bindtap="fillWechatName">
+      <text class="quick-t">{{t.sheet_quickTitle}}</text>
+      <text class="quick-s">{{t.sheet_quickSub}}</text>
+    </view>
+
+    <input
+      class="form-input"
+      id="name-input"
+      type="{{form.source === 'wechat' ? 'nickname' : 'text'}}"
+      value="{{form.name}}"
+      maxlength="20"
+      focus="{{nameFocus}}"
+      placeholder="{{form.source === 'wechat' ? t.sheet_namePhWechat : t.sheet_namePhManual}}"
+      placeholder-class="form-ph"
+      bindinput="onNameInput"
+      bindblur="onNameBlur"
+    />
+    <view class="form-hint">{{form.source === 'wechat' ? t.sheet_hintWechat : t.sheet_hintManual}}</view>
+  </view>
+
+  <view class="form-row">
+    <view class="form-label">
+      <text class="form-label-t">{{t.sheet_remark}}</text>
+      <text class="form-label-s">{{t.sheet_optional}}</text>
+    </view>
+    <input
+      class="form-input"
+      value="{{form.remark}}"
+      maxlength="60"
+      placeholder="{{t.sheet_remarkPh}}"
+      placeholder-class="form-ph"
+      bindinput="onRemarkInput"
+    />
+  </view>
+
+  <view class="sheet-actions">
+    <button class="btn btn-line" bindtap="closeJoin">{{t.sheet_cancel}}</button>
+    <button class="btn btn-primary" hover-class="btn-hover" bindtap="submitJoin" loading="{{submitting}}" disabled="{{submitting}}">{{t.sheet_submit}}</button>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

@@ -1,0 +1,9 @@
+# 生成产物（由 tools/build-preview.mjs 生成）
+preview.html
+
+# 依赖
+node_modules/
+
+# 系统/编辑器文件
+.DS_Store
+Thumbs.db
