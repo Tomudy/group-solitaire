@@ -356,6 +356,26 @@
   z-index: 100;
   transform: translateY(100%);
   transition: transform 0.26s ease;
+  display: flex;
+  flex-direction: column;
+  /* 高度上限由 JS 按窗口算好写在行内 style 上（sheetMaxH，px）。
+     这里不再写 vh：部分 Android 机型 vh 与 flex 收缩都不可靠，
+     scroll-view 会被内容撑开，把弹窗顶成全屏。 */
+}
+
+/* 可滚动内容区：高度同样由 JS 写在行内 style 上（sheetBodyH，px）。
+   min-height:0 让它在空间不足时允许收缩，而不是把父容器撑破。 */
+.sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sheet-body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  color: transparent;
 }
 
 .sheet-in {
@@ -368,6 +388,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 20rpx 0;
+  flex-shrink: 0;
 }
 
 .sheet-title {
@@ -549,6 +570,11 @@
   flex-direction: row;
   align-items: center;
   padding: 24rpx 0 28rpx;
+  flex-shrink: 0;
+}
+
+.sheet .safe-bottom {
+  flex-shrink: 0;
 }
 
 .sheet-actions .btn-line {
@@ -626,7 +652,8 @@
 .form-area {
   margin-top: 14rpx;
   width: 100%;
-  min-height: 150rpx;
+  /* 200rpx ≈ 5 行可见高度，说明写长了不至于只露一两行 */
+  min-height: 200rpx;
   padding: 20rpx 24rpx;
   background: #F7F8FA;
   border-radius: 12rpx;

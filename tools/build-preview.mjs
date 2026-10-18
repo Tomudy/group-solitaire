@@ -130,6 +130,11 @@ const head = `<!DOCTYPE html>
 
 ${appCss}
 ${pageCss}
+
+  /* 预览壳内：弹窗限高按手机壳算，不能用浏览器的 vh */
+  .phone .sheet { max-height: 88%; }
+  .phone .sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .phone .sheet-body::-webkit-scrollbar { width: 0; }
 </style>
 </head>
 <body>
@@ -203,7 +208,7 @@ var wx = {
   setStorageSync: function(k, v){ __mem[k] = v; },
   removeStorageSync: function(k){ delete __mem[k]; },
   getAppBaseInfo: function(){ return { language: 'zh_CN' }; },
-  getSystemInfoSync: function(){ return { language: 'zh_CN' }; },
+  getSystemInfoSync: function(){ return { language: 'zh_CN', windowHeight: 700, screenHeight: 700 }; },
   env: { USER_DATA_PATH: '/preview' },
   getFileSystemManager: function(){ return { saveFileSync: function(){} }; }
 };
@@ -301,6 +306,10 @@ function whoDesc(){
 
 var screenEl = document.getElementById('screen');
 
+/* 弹窗尺寸：与页面 measureSheet() 同一套算法，预览里窗口高度按手机壳可见区算 */
+var SHEET_MAX = Math.round((wx.getSystemInfoSync().windowHeight || 700) * 0.86);
+var SHEET_BODY = Math.max(200, SHEET_MAX - 150);
+
 function render(){
   var m = M();
   var sol = store.getSolitaire();
@@ -381,11 +390,12 @@ function render(){
     var f = ui.form;
     joinSheet = ''
       + '<div class="mask" data-act="closejoin"></div>'
-      + '<div class="sheet sheet-in">'
+      + '<div class="sheet sheet-in" style="max-height:' + SHEET_MAX + 'px">'
       +   '<div class="sheet-head">'
       +     '<span class="sheet-title">' + esc(m.sheet_title) + '</span>'
       +     '<span class="sheet-close" data-act="closejoin">&times;</span>'
       +   '</div>'
+      +   '<div class="sheet-body" style="max-height:' + SHEET_BODY + 'px">'
       +   '<div class="form-row avatar-row">'
       +     '<button class="avatar-btn" data-act="avatar">'
       +       '<span class="avatar-txt">' + esc(f.name ? f.name.slice(0, 1) : '?') + '</span>'
@@ -411,6 +421,7 @@ function render(){
       +     '<div class="form-label"><span class="form-label-t">' + esc(m.sheet_remark) + '</span><span class="form-label-s">' + esc(m.sheet_optional) + '</span></div>'
       +     '<input class="form-input" id="f-remark" value="' + esc(f.remark) + '" maxlength="60" placeholder="' + esc(m.sheet_remarkPh) + '">'
       +   '</div>'
+      +   '</div>'
       +   '<div class="sheet-actions">'
       +     '<button class="btn btn-line" data-act="closejoin">' + esc(m.sheet_cancel) + '</button>'
       +     '<button class="btn btn-primary" data-act="submitjoin">' + esc(m.sheet_submit) + '</button>'
@@ -433,11 +444,12 @@ function render(){
     });
     adminSheet = ''
       + '<div class="mask" data-act="closeadmin"></div>'
-      + '<div class="sheet sheet-in">'
+      + '<div class="sheet sheet-in" style="max-height:' + SHEET_MAX + 'px">'
       +   '<div class="sheet-head">'
       +     '<span class="sheet-title">' + esc(m.owner_panelTitle) + '</span>'
       +     '<span class="sheet-close" data-act="closeadmin">&times;</span>'
       +   '</div>'
+      +   '<div class="sheet-body" style="height:' + SHEET_BODY + 'px">'
       +   '<div class="sheet-sub">' + esc(m.owner_panelSub) + '</div>'
       +   '<div class="form-row">'
       +     '<div class="form-label"><span class="form-label-t">' + esc(m.owner_editTitle) + '</span></div>'
@@ -479,6 +491,7 @@ function render(){
       +   '<div class="form-row">'
       +     '<div class="form-label"><span class="form-label-t">' + esc(m.owner_transfer) + '</span></div>'
       +     (n > 0 ? '<div class="pick-list">' + picks + '</div>' : '<div class="pick-empty">' + esc(m.owner_transferEmpty) + '</div>')
+      +   '</div>'
       +   '</div>'
       +   '<div class="sheet-actions">'
       +     '<button class="btn btn-line" data-act="closeadmin">' + esc(m.sheet_cancel) + '</button>'

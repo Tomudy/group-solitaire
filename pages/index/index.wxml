@@ -121,12 +121,15 @@
 </view>
 
   <!-- ================= 接龙弹窗 ================= -->
-<view class="mask" wx:if="{{showJoin}}" bindtap="closeJoin"></view>
-<view class="sheet {{showJoin ? 'sheet-in' : ''}}" wx:if="{{showJoin}}">
+<view class="mask" wx:if="{{showJoin}}" bindtap="closeJoin" catchtouchmove="noop"></view>
+<view class="sheet {{showJoin ? 'sheet-in' : ''}}" wx:if="{{showJoin}}" style="max-height:{{sheetMaxH}}px">
   <view class="sheet-head">
     <text class="sheet-title">{{t.sheet_title}}</text>
     <view class="sheet-close" bindtap="closeJoin">×</view>
   </view>
+
+  <!-- 内容区可滚动：高度由 JS 按窗口算好（px），不依赖 vh / flex 收缩 -->
+  <scroll-view class="sheet-body" scroll-y style="max-height:{{sheetBodyH}}px">
 
   <!-- 头像：open-type=chooseAvatar 走官方头像选择能力 -->
   <view class="form-row avatar-row">
@@ -196,6 +199,8 @@
     />
   </view>
 
+  </scroll-view>
+
   <view class="sheet-actions">
     <button class="btn btn-line" bindtap="closeJoin">{{t.sheet_cancel}}</button>
     <button class="btn btn-primary" hover-class="btn-hover" bindtap="submitJoin" loading="{{submitting}}" disabled="{{submitting}}">{{t.sheet_submit}}</button>
@@ -205,13 +210,15 @@
 </view>
 
 <!-- ================= 发起人管理弹窗 ================= -->
-<view class="mask" wx:if="{{showAdmin}}" bindtap="closeAdmin"></view>
-<view class="sheet {{showAdmin ? 'sheet-in' : ''}}" wx:if="{{showAdmin}}">
+<view class="mask" wx:if="{{showAdmin}}" bindtap="closeAdmin" catchtouchmove="noop"></view>
+<view class="sheet {{showAdmin ? 'sheet-in' : ''}}" wx:if="{{showAdmin}}" style="max-height:{{sheetMaxH}}px">
   <view class="sheet-head">
     <text class="sheet-title">{{t.owner_panelTitle}}</text>
     <view class="sheet-close" bindtap="closeAdmin">×</view>
   </view>
 
+  <!-- 内容区可滚动：管理面板字段多，这里给确定高度，滚动才生效 -->
+  <scroll-view class="sheet-body" scroll-y style="height:{{sheetBodyH}}px">
   <view class="sheet-sub">{{t.owner_panelSub}}</view>
 
   <view class="form-row">
@@ -327,6 +334,8 @@
     </view>
     <view class="pick-empty" wx:else>{{t.owner_transferEmpty}}</view>
   </view>
+
+  </scroll-view>
 
   <view class="sheet-actions">
     <button class="btn btn-line" bindtap="closeAdmin">{{t.sheet_cancel}}</button>

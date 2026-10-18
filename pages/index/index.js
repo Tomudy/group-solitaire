@@ -50,15 +50,22 @@ Page({
     showAdmin: false,
     adminForm: { title: '', desc: '', host: '', location: '', quota: '0', date: '', time: '', transferTo: '' },
     // 可受让发起人身份的人：除自己以外的接龙者
-    transferList: []
+    transferList: [],
+    // 弹窗尺寸：真机（尤其 Android）上 scroll-view 靠 flex 收缩拿高度不可靠，
+    // 会把自己撑开、把弹窗顶成全屏，所以这里用 JS 算出确定的 px 高度
+    sheetMaxH: 0,
+    sheetBodyH: 0
   },
 
   onLoad() {
     i18n.init()
+    this.measureSheet()
     this.applyLang()
   },
 
   onShow() {
+    // 横竖屏切换 / 分屏后窗口高度会变，重新量一次
+    this.measureSheet()
     this.applyLang()
   },
 
@@ -66,6 +73,32 @@ Page({
     this.applyLang()
     wx.stopPullDownRefresh()
   },
+
+  /* ---------------------------------------------- 弹窗尺寸 */
+  /**
+   * 按可视窗口高度算出弹窗总高上限与内容区高度（px）。
+   * 小程序里 scroll-view 必须有确定高度才会滚动；用 vh / flex:1 在部分
+   * Android 机型（如小米）上不生效，内容会直接把弹窗撑成全屏。
+   */
+  measureSheet() {
+    let h = 0
+    try {
+      const info = (typeof wx.getWindowInfo === 'function')
+        ? wx.getWindowInfo()
+        : wx.getSystemInfoSync()
+      h = info.windowHeight || info.screenHeight || 0
+    } catch (e) {}
+    if (!h) h = 667
+    const maxH = Math.round(h * 0.86)
+    // 扣掉常驻的标题栏 + 底部按钮 + 安全区，剩下的给内容区
+    const bodyH = Math.max(200, maxH - 150)
+    if (maxH !== this.data.sheetMaxH || bodyH !== this.data.sheetBodyH) {
+      this.setData({ sheetMaxH: maxH, sheetBodyH: bodyH })
+    }
+  },
+
+  /** 空处理：挡住滚动穿透（Android 上弹窗滚动会带着背景页面一起动） */
+  noop() {},
 
   /* ---------------------------------------------- 语言 */
   /** 把当前语言文案写进 data，全界面即时刷新 */
