@@ -33,39 +33,11 @@
       },
       {
         "type": "file",
-        "value": "logo.png"
-      },
-      {
-        "type": "file",
-        "value": "logo-icon.png"
-      },
-      {
-        "type": "file",
-        "value": "logo-icon-512.png"
-      },
-      {
-        "type": "file",
-        "value": "logo-icon-preview.png"
-      },
-      {
-        "type": "file",
-        "value": "logo-icon-a.png"
-      },
-      {
-        "type": "file",
         "value": "logo-icon-b.png"
       },
       {
         "type": "file",
-        "value": "logo-icon-a-512.png"
-      },
-      {
-        "type": "file",
         "value": "logo-icon-b-512.png"
-      },
-      {
-        "type": "file",
-        "value": "logo-icon-variants-preview.png"
       }
     ],
     "include": []
