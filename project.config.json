@@ -18,6 +18,54 @@
       {
         "type": "file",
         "value": "preview.html"
+      },
+      {
+        "type": "glob",
+        "value": "preview*.png"
+      },
+      {
+        "type": "folder",
+        "value": "group-solitaire-logo_assets"
+      },
+      {
+        "type": "file",
+        "value": "group-solitaire-logo.miora"
+      },
+      {
+        "type": "file",
+        "value": "logo.png"
+      },
+      {
+        "type": "file",
+        "value": "logo-icon.png"
+      },
+      {
+        "type": "file",
+        "value": "logo-icon-512.png"
+      },
+      {
+        "type": "file",
+        "value": "logo-icon-preview.png"
+      },
+      {
+        "type": "file",
+        "value": "logo-icon-a.png"
+      },
+      {
+        "type": "file",
+        "value": "logo-icon-b.png"
+      },
+      {
+        "type": "file",
+        "value": "logo-icon-a-512.png"
+      },
+      {
+        "type": "file",
+        "value": "logo-icon-b-512.png"
+      },
+      {
+        "type": "file",
+        "value": "logo-icon-variants-preview.png"
       }
     ],
     "include": []

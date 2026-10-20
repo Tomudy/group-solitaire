@@ -1,6 +1,9 @@
 # 生成产物（由 tools/build-preview.mjs 生成）
 preview.html
 
+# 预览截图（生成产物，体积大且已排除出代码包）
+preview*.png
+
 # 依赖
 node_modules/
 
