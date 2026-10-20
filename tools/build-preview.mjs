@@ -53,7 +53,7 @@ const head = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>群接龙小程序 · 双语预览</title>
+<title>小橙接龙小程序 · 双语预览</title>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -151,7 +151,7 @@ ${pageCss}
 </div>
 
 <div class="notes">
-  <h1>群接龙 · 发起人权限验证</h1>
+  <h1>小橙接龙 · 发起人权限验证</h1>
   <div class="sub">手机壳内跑的是<b>真实数据层</b> <code>utils/store.js</code> + <code>utils/i18n.js</code>（源码注入，只 mock 了 wx），所以这里的权限判定与真机一致，不是另写一套演示逻辑。</div>
 
   <div class="block">
