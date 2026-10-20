@@ -210,7 +210,26 @@ var wx = {
   getAppBaseInfo: function(){ return { language: 'zh_CN' }; },
   getSystemInfoSync: function(){ return { language: 'zh_CN', windowHeight: 700, screenHeight: 700 }; },
   env: { USER_DATA_PATH: '/preview' },
-  getFileSystemManager: function(){ return { saveFileSync: function(){} }; }
+  getFileSystemManager: function(){ return { saveFileSync: function(){} }; },
+
+  /* ---- 隐私授权：与真机同流程（未同意 -> 弹框 -> 用户表态 -> 回调） ---- */
+  __privacyPending: null,
+  onNeedPrivacyAuthorization: function(cb){ wx.__privacyCb = cb; },
+  getPrivacySetting: function(o){
+    if (o && o.success) o.success({ needAuthorization: !ui.privacyAgreed, privacyContractName: ui.privacyName });
+  },
+  requirePrivacyAuthorize: function(o){
+    if (ui.privacyAgreed) { if (o && o.success) o.success(); return; }
+    ui.showPrivacy = true;
+    wx.__privacyPending = function(ok){
+      ui.showPrivacy = false;
+      wx.__privacyPending = null;
+      if (ok) { ui.privacyAgreed = true; if (o && o.success) o.success(); }
+      else if (o && o.fail) o.fail({ errMsg: 'requirePrivacyAuthorize:fail user denied' });
+    };
+    render();
+  },
+  openPrivacyContract: function(){ flash('真机中点这里会打开《' + ui.privacyName + '》全文'); }
 };
 
 /* ============ 2. 极简 CommonJS 运行时：按 basename 解析 ============ */
@@ -247,7 +266,11 @@ var ui = {
   showJoin: false,
   showAdmin: false,
   form: { name: '', avatar: '', remark: '', source: 'wechat' },
-  adminForm: { title: '', desc: '', host: '', location: '', quota: '0', date: '', time: '' }
+  adminForm: { title: '', desc: '', host: '', location: '', quota: '0', date: '', time: '' },
+  // 隐私授权：开关模拟「是否已同意」，可验证同意/不同意两条分支
+  showPrivacy: false,
+  privacyAgreed: false,
+  privacyName: '《用户隐私保护指引》'
 };
 
 function pad2(n){ return n < 10 ? '0' + n : '' + n; }
@@ -501,6 +524,24 @@ function render(){
       + '</div>';
   }
 
+  var privacySheet = '';
+  if (ui.showPrivacy) {
+    privacySheet = ''
+      + '<div class="privacy-mask"></div>'
+      + '<div class="privacy">'
+      +   '<div class="privacy-title">' + esc(m.privacy_title) + '</div>'
+      +   '<div class="privacy-body">'
+      +     '<span>' + esc(m.privacy_pre) + '</span>'
+      +     '<span class="privacy-link" data-act="privacycontract">' + esc(ui.privacyName) + '</span>'
+      +     '<span>' + esc(m.privacy_post) + '</span>'
+      +   '</div>'
+      +   '<div class="privacy-actions">'
+      +     '<div class="privacy-btn privacy-btn-line" data-act="disagree">' + esc(m.privacy_disagree) + '</div>'
+      +     '<div class="privacy-btn privacy-btn-main" data-act="agree">' + esc(m.privacy_agree) + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+
   screenEl.innerHTML = ''
     + '<div class="page">'
     +   '<div class="langbar">'
@@ -521,7 +562,8 @@ function render(){
     + '</div>'
     + footer
     + joinSheet
-    + adminSheet;
+    + adminSheet
+    + privacySheet;
 
   document.getElementById('nav-title').textContent = m.app_name;
   document.getElementById('btn-zh').className = lang === 'zh' ? 'on' : '';
@@ -543,20 +585,32 @@ function bind(){
   if (remark) remark.addEventListener('input', function(e){ ui.form.remark = e.target.value; });
 }
 
+/** 真正打开填写面板（隐私授权通过后才走到这里） */
+function doOpenJoin(){
+  var mine = null, list = store.listParticipants();
+  for (var i = 0; i < list.length; i++) { if (list[i].mine) mine = list[i]; }
+  ui.form = mine
+    ? { name: mine.name, avatar: mine.avatar || '', remark: mine.remark || '', source: mine.source }
+    : { name: '', avatar: '', remark: '', source: 'wechat' };
+  ui.showJoin = true;
+  render();
+}
+
 function onAct(act, el){
   var m = M();
   if (act === 'switchlang') { setLang(lang === 'zh' ? 'en' : 'zh'); return; }
 
   if (act === 'openjoin') {
-    var mine = null, list = store.listParticipants();
-    for (var i = 0; i < list.length; i++) { if (list[i].mine) mine = list[i]; }
-    ui.form = mine
-      ? { name: mine.name, avatar: mine.avatar || '', remark: mine.remark || '', source: mine.source }
-      : { name: '', avatar: '', remark: '', source: 'wechat' };
-    ui.showJoin = true;
-    render();
+    // 与真机同流程：先确认隐私授权，不同意只提示、不打开填写面板
+    wx.requirePrivacyAuthorize({
+      success: function(){ doOpenJoin(); },
+      fail: function(){ flash(m.privacy_need); render(); }
+    });
     return;
   }
+  if (act === 'agree') { if (wx.__privacyPending) wx.__privacyPending(true); render(); return; }
+  if (act === 'disagree') { if (wx.__privacyPending) wx.__privacyPending(false); render(); return; }
+  if (act === 'privacycontract') { wx.openPrivacyContract(); return; }
   if (act === 'closejoin') { ui.showJoin = false; render(); return; }
   if (act === 'src') { ui.form.source = el.getAttribute('data-source'); render(); return; }
   if (act === 'avatar') { flash('真机中点这里会拉起微信头像选择'); return; }

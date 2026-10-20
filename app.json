@@ -5,12 +5,13 @@
   "window": {
     "navigationBarBackgroundColor": "#FFFFFF",
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "群接龙",
+    "navigationBarTitleText": "小橙接龙",
     "backgroundColor": "#F5F6F8",
     "backgroundTextStyle": "light",
     "enablePullDownRefresh": true
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "__usePrivacyCheck__": true
 }

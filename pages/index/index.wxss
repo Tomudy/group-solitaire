@@ -767,3 +767,85 @@
   color: #B4BAC4;
   text-align: center;
 }
+
+/* ============ 隐私授权弹窗 ============ */
+/* 层级要高于接龙/管理弹窗（z-index 100），否则会被盖住 */
+.privacy-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 300;
+}
+
+.privacy {
+  position: fixed;
+  top: 50%;
+  left: 56rpx;
+  right: 56rpx;
+  transform: translateY(-50%);
+  padding: 48rpx 40rpx 32rpx;
+  background: #FFFFFF;
+  border-radius: 28rpx;
+  z-index: 301;
+}
+
+.privacy-title {
+  margin-bottom: 24rpx;
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+  text-align: center;
+}
+
+.privacy-body {
+  margin-bottom: 40rpx;
+  font-size: 28rpx;
+  line-height: 1.7;
+  color: #5A5A5A;
+}
+
+/* 协议名：可点开完整原文 */
+.privacy-link {
+  color: #FF6B35;
+}
+
+.privacy-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.privacy-btn {
+  flex: 1;
+  height: 84rpx;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  line-height: 1.2;
+  border-radius: 42rpx;
+}
+
+/* 小程序 button 自带一圈 ::after 边框，去掉才好看 */
+.privacy-btn::after {
+  border: none;
+}
+
+.privacy-btn + .privacy-btn {
+  margin-left: 20rpx;
+}
+
+.privacy-btn-line {
+  background: #F2F3F5;
+  color: #6B6B6B;
+}
+
+.privacy-btn-main {
+  background: #FF6B35;
+  color: #FFFFFF;
+  font-weight: 500;
+}

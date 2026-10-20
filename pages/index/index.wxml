@@ -344,3 +344,25 @@
 
   <view class="safe-bottom"></view>
 </view>
+
+<!-- ================= 隐私授权弹窗 ================= -->
+<!-- 平台要求：调用头像/昵称等隐私接口前必须取得用户同意，
+     且「同意」必须走 button open-type="agreePrivacyAuthorization"，自绘按钮无效 -->
+<view class="privacy-mask" wx:if="{{showPrivacy}}"></view>
+<view class="privacy" wx:if="{{showPrivacy}}">
+  <view class="privacy-title">{{t.privacy_title}}</view>
+  <view class="privacy-body">
+    <text>{{t.privacy_pre}}</text>
+    <text class="privacy-link" bindtap="openPrivacyContract">{{privacyName}}</text>
+    <text>{{t.privacy_post}}</text>
+  </view>
+  <view class="privacy-actions">
+    <button class="privacy-btn privacy-btn-line" bindtap="onDisagreePrivacy">{{t.privacy_disagree}}</button>
+    <button
+      id="agree-btn"
+      class="privacy-btn privacy-btn-main"
+      open-type="agreePrivacyAuthorization"
+      bind:agreeprivacyauthorization="onAgreePrivacy"
+    >{{t.privacy_agree}}</button>
+  </view>
+</view>

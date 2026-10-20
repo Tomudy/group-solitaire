@@ -9,7 +9,16 @@
  */
 module.exports = {
   /* ---------- App ---------- */
-  'app.name': 'Group Solitaire',
+  'app.name': 'Orange Solitaire',
+
+  /* ---------- Privacy consent (platform rule: privacy APIs require consent first) ---------- */
+  'privacy.title': 'Privacy Notice',
+  'privacy.pre': 'Thanks for using Orange Solitaire. Signing up uses your WeChat nickname and avatar. Please read and agree to the ',
+  'privacy.link': 'Privacy Protection Guide',
+  'privacy.post': ' first. Both stay on this phone and are only used to show the sign-up list.',
+  'privacy.disagree': 'Decline',
+  'privacy.agree': 'Agree',
+  'privacy.need': 'Please accept the privacy notice before signing up',
 
   /* ---------- Language switch ---------- */
   'lang.label': 'Language',

@@ -54,13 +54,18 @@ Page({
     // 弹窗尺寸：真机（尤其 Android）上 scroll-view 靠 flex 收缩拿高度不可靠，
     // 会把自己撑开、把弹窗顶成全屏，所以这里用 JS 算出确定的 px 高度
     sheetMaxH: 0,
-    sheetBodyH: 0
+    sheetBodyH: 0,
+    // 隐私授权弹窗：调用头像/昵称接口前，平台要求先取得用户同意
+    showPrivacy: false,
+    // 后台配置的协议名，取不到时用语言包里的兜底文案
+    privacyName: ''
   },
 
   onLoad() {
     i18n.init()
     this.measureSheet()
     this.applyLang()
+    this.initPrivacy()
   },
 
   onShow() {
@@ -99,6 +104,75 @@ Page({
 
   /** 空处理：挡住滚动穿透（Android 上弹窗滚动会带着背景页面一起动） */
   noop() {},
+
+  /* ---------------------------------------------- 隐私授权 */
+  /**
+   * 平台规则：chooseAvatar 与 input type="nickname" 都是隐私接口。
+   * 后台没配《用户隐私保护指引》或用户没同意，调用会直接 fail
+   * （真机表现就是「点了没反应」），代码审核也会以「调用未声明隐私接口」驳回。
+   * 这里注册一次授权监听，并把后台配置的协议名取回来。
+   */
+  initPrivacy() {
+    if (typeof wx.onNeedPrivacyAuthorization !== 'function') return
+    wx.onNeedPrivacyAuthorization((resolve) => {
+      // 需要用户表态：弹授权框，resolve 留给按钮回调调用
+      this._privacyResolve = resolve
+      this.setData({
+        showPrivacy: true,
+        privacyName: this.data.privacyName || i18n.t('privacy.link')
+      })
+    })
+    if (typeof wx.getPrivacySetting === 'function') {
+      wx.getPrivacySetting({
+        success: (res) => {
+          if (res && res.privacyContractName) {
+            this.setData({ privacyName: res.privacyContractName })
+          }
+        }
+      })
+    }
+  },
+
+  /**
+   * 确认已取得隐私授权：已同意或平台不支持时直接放行，未同意时弹官方授权框。
+   * 只在要报名（确实要用昵称/头像）时才调，浏览接龙列表不受影响 —— 平台
+   * 不允许用授权墙硬阻断核心功能，「先体验后授权」才能过审。
+   */
+  ensurePrivacy() {
+    if (typeof wx.requirePrivacyAuthorize !== 'function') return Promise.resolve(true)
+    const self = this
+    return new Promise((resolve) => {
+      wx.requirePrivacyAuthorize({
+        success: () => resolve(true),
+        fail: () => {
+          self.setData({ showPrivacy: false })
+          resolve(false)
+        }
+      })
+    })
+  },
+
+  /** 同意：必须走 open-type="agreePrivacyAuthorization"，自绘按钮平台不认 */
+  onAgreePrivacy() {
+    if (this._privacyResolve) {
+      this._privacyResolve({ buttonId: 'agree-btn', event: 'agree' })
+      this._privacyResolve = null
+    }
+    this.setData({ showPrivacy: false })
+  },
+
+  onDisagreePrivacy() {
+    if (this._privacyResolve) {
+      this._privacyResolve({ event: 'disagree' })
+      this._privacyResolve = null
+    }
+    this.setData({ showPrivacy: false })
+  },
+
+  /** 打开完整协议原文 */
+  openPrivacyContract() {
+    if (typeof wx.openPrivacyContract === 'function') wx.openPrivacyContract({})
+  },
 
   /* ---------------------------------------------- 语言 */
   /** 把当前语言文案写进 data，全界面即时刷新 */
@@ -142,6 +216,18 @@ Page({
 
   /* ---------------------------------------------- 弹窗 */
   openJoin() {
+    // 报名要用昵称/头像（隐私接口），先确认授权；不同意只提示，不打开填写面板
+    this.ensurePrivacy().then((ok) => {
+      if (!ok) {
+        wx.showToast({ title: i18n.t('privacy.need'), icon: 'none' })
+        return
+      }
+      this.doOpenJoin()
+    })
+  },
+
+  /** 真正打开填写面板（授权通过后才走到这里） */
+  doOpenJoin() {
     const mine = this.data.mine
     const profile = store.getProfile() || {}
 
