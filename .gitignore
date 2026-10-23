@@ -10,3 +10,7 @@ node_modules/
 # 系统/编辑器文件
 .DS_Store
 Thumbs.db
+
+# 开发者工具的个人本地配置（含本机编译选项，不应进仓库；
+# 团队共享配置走 project.config.json）
+project.private.config.json
