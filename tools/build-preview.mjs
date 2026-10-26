@@ -370,9 +370,16 @@ function render(){
     });
   }
 
-  /* ---- 简介卡片 ---- */
-  var intro = ''
-    + '<div class="card intro">'
+  /* ---- 简介卡片：空态时换成引导卡 ---- */
+  var isEmpty = !!sol.empty;
+  var intro = isEmpty
+    ? ('<div class="card empty-hero">'
+      +   '<div class="empty-hero-icon">+</div>'
+      +   '<span class="empty-hero-t">' + esc(m.empty_title) + '</span>'
+      +   '<span class="empty-hero-s">' + esc(m.empty_desc) + '</span>'
+      +   '<div class="btn btn-primary empty-hero-btn" data-act="openadmin">' + esc(m.empty_action) + '</div>'
+      + '</div>')
+    : ('<div class="card intro">'
     +   '<div class="intro-head">'
     +     '<span class="intro-title">' + esc(sol.title) + '</span>'
     +     '<span class="status status-' + sol.status + '">' + esc(sol.statusText) + '</span>'
@@ -395,7 +402,7 @@ function render(){
     +   (sol.isOwner
         ? '<div class="owner-entry" data-act="openadmin"><span class="owner-entry-t">' + esc(m.owner_manage) + '</span><span class="owner-entry-arrow">&rsaquo;</span></div>'
         : '')
-    + '</div>';
+    + '</div>');
 
   var footer = ''
     + '<div class="footer">'
@@ -407,6 +414,15 @@ function render(){
     +   '</div>'
     +   '<div class="safe-bottom"></div>'
     + '</div>';
+
+  /* ---- 名单区：空态下没有接龙，整块不显示 ---- */
+  var listBlock = isEmpty ? '' : (
+      '<div class="sec-title">'
+    +   '<div class="left"><span class="bar"></span><span class="t">' + esc(m.list_title) + '</span></div>'
+    +   '<span class="count">' + esc(m.list_count).replace('{n}', sol.joined) + '</span>'
+    + '</div>'
+    + '<div class="card list-card">' + rows + '</div>'
+  );
 
   var joinSheet = '';
   if (ui.showJoin) {
@@ -469,11 +485,11 @@ function render(){
       + '<div class="mask" data-act="closeadmin"></div>'
       + '<div class="sheet sheet-in" style="max-height:' + SHEET_MAX + 'px">'
       +   '<div class="sheet-head">'
-      +     '<span class="sheet-title">' + esc(m.owner_panelTitle) + '</span>'
+      +     '<span class="sheet-title">' + esc(isEmpty ? m.owner_createTitle : m.owner_panelTitle) + '</span>'
       +     '<span class="sheet-close" data-act="closeadmin">&times;</span>'
       +   '</div>'
       +   '<div class="sheet-body" style="height:' + SHEET_BODY + 'px">'
-      +   '<div class="sheet-sub">' + esc(m.owner_panelSub) + '</div>'
+      +   '<div class="sheet-sub">' + esc(isEmpty ? m.owner_createSub : m.owner_panelSub) + '</div>'
       +   '<div class="form-row">'
       +     '<div class="form-label"><span class="form-label-t">' + esc(m.owner_editTitle) + '</span></div>'
       +     '<input class="form-input" id="a-title" value="' + esc(a.title) + '" maxlength="60">'
@@ -518,7 +534,7 @@ function render(){
       +   '</div>'
       +   '<div class="sheet-actions">'
       +     '<button class="btn btn-line" data-act="closeadmin">' + esc(m.sheet_cancel) + '</button>'
-      +     '<button class="btn btn-primary" data-act="submitadmin">' + esc(m.owner_save) + '</button>'
+      +     '<button class="btn btn-primary" data-act="submitadmin">' + esc(isEmpty ? m.owner_createSave : m.owner_save) + '</button>'
       +   '</div>'
       +   '<div class="safe-bottom"></div>'
       + '</div>';
@@ -553,14 +569,10 @@ function render(){
     +     '</div>'
     +   '</div>'
     +   intro
-    +   '<div class="sec-title">'
-    +     '<div class="left"><span class="bar"></span><span class="t">' + esc(m.list_title) + '</span></div>'
-    +     '<span class="count">' + esc(m.list_count).replace('{n}', sol.joined) + '</span>'
-    +   '</div>'
-    +   '<div class="card list-card">' + rows + '</div>'
+    +   listBlock
     +   '<div class="foot-space"></div>'
     + '</div>'
-    + footer
+    + (isEmpty ? '' : footer)
     + joinSheet
     + adminSheet
     + privacySheet;

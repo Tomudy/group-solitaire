@@ -139,51 +139,24 @@ function getOwner() {
 }
 
 /* ------------------------------------------------------------ 默认数据 */
+/**
+ * 空接龙：首次打开不再塞一场假的示例接龙，而是留空并标记 empty，
+ * 由页面显示引导卡，让用户发起真正属于自己的第一场接龙。
+ */
 function defaultSolitaire() {
   return {
     id: 'solitaire_default',
-    title: i18n.t('demo.title'),
-    desc: i18n.t('demo.desc'),
-    host: i18n.t('demo.host'),
-    location: i18n.t('demo.location'),
-    // 默认一周后截止，保证首次打开是可接龙状态
-    deadlineAt: Date.now() + 7 * 86400000,
-    quota: 20,
-    createdAt: Date.now()
+    title: '',
+    desc: '',
+    host: '',
+    location: '',
+    deadlineAt: 0,
+    quota: 0,
+    createdAt: Date.now(),
+    empty: true
   }
 }
 
-function seedParticipants() {
-  const now = Date.now()
-  const names = i18n.t('demo.names') || []
-  const remarks = i18n.t('demo.remarks') || []
-  return [
-    {
-      id: uid('p'),
-      name: names[0] || '',
-      avatar: '',
-      source: 'manual',
-      remark: remarks[0] || '',
-      createdAt: now - 3 * 3600000
-    },
-    {
-      id: uid('p'),
-      name: names[1] || '',
-      avatar: '',
-      source: 'wechat',
-      remark: remarks[1] || '',
-      createdAt: now - 2 * 3600000
-    },
-    {
-      id: uid('p'),
-      name: names[2] || '',
-      avatar: '',
-      source: 'wechat',
-      remark: remarks[2] || '',
-      createdAt: now - 3600000
-    }
-  ]
-}
 
 /* ------------------------------------------------------------ 初始化 */
 function bootstrap() {
@@ -196,7 +169,7 @@ function bootstrap() {
     cache.participants = saved.participants
   } else {
     cache.solitaire = defaultSolitaire()
-    cache.participants = seedParticipants()
+    cache.participants = []
     flush()
   }
   cache.profile = readLocal(KEY_PROFILE, null)
@@ -250,6 +223,8 @@ function getSolitaire() {
 
   return {
     id: s.id,
+    // empty：还没发起过接龙，页面据此显示引导卡而不是接龙详情
+    empty: !!s.empty,
     title: s.title || '',
     desc: s.desc || '',
     host: s.host || '',
@@ -462,6 +437,8 @@ function updateSolitaire(payload) {
   if (p.quota !== undefined) s.quota = Math.floor(Number(p.quota))
   if (p.deadlineAt !== undefined) s.deadlineAt = Number(p.deadlineAt)
   if (p.closed !== undefined) s.closed = !!p.closed
+  // 保存过一次就不再是空态：接龙正式成立
+  if (s.empty) s.empty = false
 
   flush()
   return { ok: true }
@@ -505,7 +482,7 @@ function saveProfile(profile) {
 /** 清空全部接龙数据，回到初始示例状态（调试用） */
 function resetAll() {
   cache.solitaire = defaultSolitaire()
-  cache.participants = seedParticipants()
+  cache.participants = []
   cache.profile = { name: '', avatar: '' }
   cache.myId = ''
   // 重置数据不等于换人：本机身份保留，重置后依旧是这场接龙的创建者

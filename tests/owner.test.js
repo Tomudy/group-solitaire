@@ -61,6 +61,18 @@ check('创建者 id 已写入接龙数据', !!owner.id && owner.id === creatorId
 check('标识为「我是创建者」', owner.isMine === true)
 check('getSolitaire 带出权限标记', A.getSolitaire().isOwner === true)
 
+/* 空态不再自带示例名单，这里自己发起一场并造几条记录，
+   供后面的越权、转让、名额校验等用例使用 */
+A.updateSolitaire({
+  title: '周末羽毛球',
+  quota: 20,
+  deadlineAt: Date.now() + 7 * 86400000
+})
+;['涛哥', '小林', '阿杰'].forEach((n) => {
+  A.addParticipant({ name: n, avatar: '', remark: '', source: 'manual' })
+})
+check('发起后不再为空态', A.getSolitaire().empty === false)
+
 /* ================= 场景 2：换个人，同一份接龙数据 ================= */
 console.log('--- 2. 另一台设备打开同一场接龙 ---')
 let list = A.listParticipants()

@@ -60,6 +60,9 @@ module.exports = {
   'owner.manage': '管理',
   'owner.panelTitle': '发起人管理',
   'owner.panelSub': '只有发起人能修改接龙信息、移除记录或转让身份',
+  'owner.createTitle': '发起接龙',
+  'owner.createSub': '填好信息后转发到群，成员点开即可报名',
+  'owner.createSave': '发起',
   'owner.editTitle': '标题',
   'owner.editDesc': '说明',
   'owner.editQuota': '名额上限',
@@ -129,14 +132,13 @@ module.exports = {
   'err.invalidQuota': '名额上限格式不正确',
   'err.quotaBelowJoined': '名额不能小于已接龙人数',
   'err.invalidDeadline': '截止时间格式不正确',
+  'err.titleRequired': '请填写接龙标题',
 
-  /* ---------- 示例数据（仅首次初始化时使用，用户自己的数据不会被翻译） ---------- */
-  'demo.title': '周末羽毛球接龙',
-  'demo.desc': '周六下午 2 点开打，场地已订好，费用 AA 人均 40 元。欢迎带朋友一起来，接龙时请备注到场人数。',
-  'demo.host': '涛哥',
-  'demo.location': '星河羽毛球馆 3 号场',
-  'demo.names': ['涛哥', '小林', '阿杰'],
-  'demo.remarks': ['发起人，订了 2 个场', '1 人', '带 1 个朋友'],
+  /* ---------- 空态：还没发起过接龙 ---------- */
+  'empty.title': '还没有接龙',
+  'empty.desc': '发起一场接龙，填好时间地点和名额，转发到群里，成员点开就能报名。',
+  'empty.action': '发起接龙',
+
 
   /* ---------- 时间 ---------- */
   'time.weekdays': ['周日', '周一', '周二', '周三', '周四', '周五', '周六'],

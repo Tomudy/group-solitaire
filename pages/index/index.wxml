@@ -10,8 +10,16 @@
     </view>
   </view>
 
+  <!-- ================= 空态：还没发起过接龙 ================= -->
+  <view class="card empty-hero" wx:if="{{solitaire.empty}}">
+    <view class="empty-hero-icon">+</view>
+    <text class="empty-hero-t">{{t.empty_title}}</text>
+    <text class="empty-hero-s">{{t.empty_desc}}</text>
+    <button class="btn btn-primary empty-hero-btn" hover-class="btn-hover" bindtap="openAdmin">{{t.empty_action}}</button>
+  </view>
+
   <!-- ================= 接龙简介 ================= -->
-  <view class="card intro">
+  <view class="card intro" wx:if="{{!solitaire.empty}}">
     <view class="intro-head">
       <text class="intro-title">{{solitaire.title}}</text>
       <view class="status status-{{solitaire.status}}">{{solitaire.statusText}}</view>
@@ -54,7 +62,8 @@
     </view>
   </view>
 
-  <!-- ================= 接龙者名单 ================= -->
+  <!-- ================= 接龙者名单（空态下不展示）================= -->
+  <block wx:if="{{!solitaire.empty}}">
   <view class="sec-title">
     <view class="left">
       <view class="bar"></view>
@@ -100,12 +109,13 @@
       <text class="empty-s">{{t.list_emptySub}}</text>
     </view>
   </view>
+  </block>
 
   <view class="foot-space"></view>
 </view>
 
-<!-- ================= 底部操作栏 ================= -->
-<view class="footer">
+<!-- ================= 底部操作栏（空态下没有可报名的接龙）================= -->
+<view class="footer" wx:if="{{!solitaire.empty}}">
   <view class="footer-tip" wx:if="{{mine}}">{{footerTipText}}</view>
   <view class="footer-inner">
     <button class="btn btn-line btn-flex" wx:if="{{mine}}" bindtap="cancelMine">{{t.footer_cancel}}</button>
@@ -213,13 +223,13 @@
 <view class="mask" wx:if="{{showAdmin}}" bindtap="closeAdmin" catchtouchmove="noop"></view>
 <view class="sheet {{showAdmin ? 'sheet-in' : ''}}" wx:if="{{showAdmin}}" style="max-height:{{sheetMaxH}}px">
   <view class="sheet-head">
-    <text class="sheet-title">{{t.owner_panelTitle}}</text>
+    <text class="sheet-title">{{solitaire.empty ? t.owner_createTitle : t.owner_panelTitle}}</text>
     <view class="sheet-close" bindtap="closeAdmin">×</view>
   </view>
 
   <!-- 内容区可滚动：管理面板字段多，这里给确定高度，滚动才生效 -->
   <scroll-view class="sheet-body" scroll-y style="height:{{sheetBodyH}}px">
-  <view class="sheet-sub">{{t.owner_panelSub}}</view>
+  <view class="sheet-sub">{{solitaire.empty ? t.owner_createSub : t.owner_panelSub}}</view>
 
   <view class="form-row">
     <view class="form-label">
@@ -339,7 +349,7 @@
 
   <view class="sheet-actions">
     <button class="btn btn-line" bindtap="closeAdmin">{{t.sheet_cancel}}</button>
-    <button class="btn btn-primary" hover-class="btn-hover" bindtap="submitAdmin">{{t.owner_save}}</button>
+    <button class="btn btn-primary" hover-class="btn-hover" bindtap="submitAdmin">{{solitaire.empty ? t.owner_createSave : t.owner_save}}</button>
   </view>
 
   <view class="safe-bottom"></view>

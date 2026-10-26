@@ -22,6 +22,8 @@ Page({
     t: {},
     // 首屏占位，onLoad 立刻用真实数据覆盖，避免出现空白按钮
     solitaire: {
+      // 首屏按空态渲染，onLoad 立刻用真实数据覆盖
+      empty: true,
       title: '',
       desc: '',
       host: '',
@@ -391,7 +393,9 @@ Page({
   /* ---------------------------------------------- 发起人管理 */
   openAdmin() {
     const s = store.getSolitaire()
-    const d = new Date(s.deadlineAt || Date.now())
+    // 空态（发起接龙）时还没有截止时间，给个一周后的默认值，
+    // 免得用户不改就直接保存出一个没有截止的接龙
+    const d = new Date(s.deadlineAt || (Date.now() + 7 * 86400000))
     const list = store.listParticipants()
     // 不能转给自己：自己的那条记录由「取消接龙」处理
     const mineId = this.data.mine ? this.data.mine.id : ''
@@ -438,6 +442,12 @@ Page({
   /** 保存接龙信息：空值视为不修改，名额 0 表示不限 */
   submitAdmin() {
     const f = this.data.adminForm
+
+    // 标题是接龙的门面，发起时尤其不能留空
+    if (!String(f.title || '').trim()) {
+      wx.showToast({ title: i18n.t('err.titleRequired'), icon: 'none' })
+      return
+    }
 
     const dp = String(f.date || '').split('-')
     const tp = String(f.time || '').split(':')

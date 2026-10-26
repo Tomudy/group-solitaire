@@ -64,6 +64,9 @@ module.exports = {
   'owner.manage': 'Manage',
   'owner.panelTitle': 'Host settings',
   'owner.panelSub': 'Only the organiser can edit details, remove entries or transfer the role',
+  'owner.createTitle': 'New solitaire',
+  'owner.createSub': 'Fill in the details, then share it to a group so people can sign up',
+  'owner.createSave': 'Create',
   'owner.editTitle': 'Title',
   'owner.editDesc': 'Description',
   'owner.editQuota': 'Spot limit',
@@ -133,14 +136,13 @@ module.exports = {
   'err.invalidQuota': 'Invalid quota value',
   'err.quotaBelowJoined': 'Quota cannot be lower than the number joined',
   'err.invalidDeadline': 'Invalid deadline',
+  'err.titleRequired': 'Please enter a title',
 
-  /* ---------- Demo data (used on first launch only; user data is never translated) ---------- */
-  'demo.title': 'Weekend Badminton',
-  'demo.desc': 'Saturday 2pm, courts already booked, ¥40 per person split evenly. Friends are welcome, just note how many are coming.',
-  'demo.host': 'Tao',
-  'demo.location': 'Galaxy Badminton Hall, Court 3',
-  'demo.names': ['Tao', 'Lin', 'AJ'],
-  'demo.remarks': ['Host, booked 2 courts', '1 person', 'Bringing a friend'],
+  /* ---------- Empty state: no solitaire yet ---------- */
+  'empty.title': 'No solitaire yet',
+  'empty.desc': 'Start one: set the time, place and quota, share it to a group, and people can sign up right away.',
+  'empty.action': 'Start a solitaire',
+
 
   /* ---------- Time ---------- */
   'time.weekdays': ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],

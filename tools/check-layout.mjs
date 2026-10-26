@@ -76,9 +76,9 @@ const CASES = [
   // 弹窗按钮：取消 220rpx=110，确认 flex:1 ≈ 343-110-20 = 213
   { key: 'sheet.cancel',        size: 30, box: 110, note: '弹窗取消按钮' },
   { key: 'sheet.submit',        size: 30, box: 213, note: '弹窗确认按钮' },
-  // 示例数据：meta-v 与 intro-desc 区域
-  { key: 'demo.title',          size: 38, box: 323, note: '示例标题' },
-  { key: 'demo.location',       size: 26, box: 253, note: '示例地点（meta-v，扣掉 meta-k）' }
+  // 空态引导卡（卡片内宽 686rpx = 343px，左右各留 32rpx 内边距）
+  { key: 'empty.title',         size: 34, box: 323, note: '空态主标题' },
+  { key: 'empty.action',        size: 30, box: 323, note: '空态按钮文案' }
 ]
 
 let warn = 0
