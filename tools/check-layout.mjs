@@ -78,7 +78,12 @@ const CASES = [
   { key: 'sheet.submit',        size: 30, box: 213, note: '弹窗确认按钮' },
   // 空态引导卡（卡片内宽 686rpx = 343px，左右各留 32rpx 内边距）
   { key: 'empty.title',         size: 34, box: 323, note: '空态主标题' },
-  { key: 'empty.action',        size: 30, box: 323, note: '空态按钮文案' }
+  { key: 'empty.action',        size: 30, box: 323, note: '空态按钮文案' },
+  // 卡片底部操作行：两个入口各占一半（343/2 - 分隔线 ≈ 168）
+  { key: 'intro.share',         size: 27, box: 160, note: '转发入口' },
+  { key: 'owner.manage',        size: 27, box: 160, note: '管理入口' },
+  // 意见反馈入口（居中，两侧留白充裕）
+  { key: 'contact.entry',       size: 24, box: 300, note: '客服入口' }
 ]
 
 let warn = 0

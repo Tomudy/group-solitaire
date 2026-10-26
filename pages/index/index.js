@@ -216,6 +216,28 @@ Page({
     })
   },
 
+  /* ---------------------------------------------- 分享转发 */
+  /**
+   * 转发卡片要带信息量：接龙靠群里传播，卡片上写着
+   * 「周末羽毛球 · 还差 3 人」比只写小程序名更容易被点开。
+   */
+  onShareAppMessage() {
+    const s = this.data.solitaire || {}
+    if (s.empty) {
+      return { title: i18n.t('share.default'), path: '/pages/index/index' }
+    }
+
+    let title
+    if (s.quota > 0) {
+      title = s.left > 0
+        ? i18n.t('share.withQuota', { title: s.title, n: s.left })
+        : i18n.t('share.full', { title: s.title })
+    } else {
+      title = i18n.t('share.noQuota', { title: s.title })
+    }
+    return { title: title, path: '/pages/index/index' }
+  },
+
   /* ---------------------------------------------- 弹窗 */
   openJoin() {
     // 报名要用昵称/头像（隐私接口），先确认授权；不同意只提示，不打开填写面板

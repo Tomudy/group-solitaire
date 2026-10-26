@@ -33,6 +33,7 @@ module.exports = {
   'intro.host': 'Host',
   'intro.location': 'Location',
   'intro.deadline': 'Deadline',
+  'intro.share': 'Share to group',
   'intro.joined': '{n} joined',
   'intro.quotaLeft': '{n} spots left',
   'intro.quotaLeft_one': '1 spot left',
@@ -143,6 +144,15 @@ module.exports = {
   'empty.desc': 'Start one: set the time, place and quota, share it to a group, and people can sign up right away.',
   'empty.action': 'Start a solitaire',
 
+  /* ---------- Sharing ---------- */
+  'share.default': 'Group sign-up sheets: set one up, share it, done',
+  'share.withQuota': '{title} · {n} spots left, tap to sign up',
+  'share.withQuota_one': '{title} · 1 spot left, tap to sign up',
+  'share.full': '{title} · Full',
+  'share.noQuota': '{title} · Tap to sign up',
+
+  /* ---------- Feedback ---------- */
+  'contact.entry': 'Feedback · Contact us',
 
   /* ---------- Time ---------- */
   'time.weekdays': ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],

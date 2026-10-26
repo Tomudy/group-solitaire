@@ -29,6 +29,7 @@ module.exports = {
   'intro.host': '发起人',
   'intro.location': '地点',
   'intro.deadline': '截止',
+  'intro.share': '转发到群',
   'intro.joined': '已接龙 {n} 人',
   'intro.quotaLeft': '还剩 {n} 个名额',
   'intro.quotaLeft_one': '还剩 1 个名额',
@@ -139,6 +140,15 @@ module.exports = {
   'empty.desc': '发起一场接龙，填好时间地点和名额，转发到群里，成员点开就能报名。',
   'empty.action': '发起接龙',
 
+  /* ---------- 转发分享 ---------- */
+  'share.default': '群接龙报名工具，发起一次，群里点开就能报名',
+  'share.withQuota': '{title} · 还差 {n} 人，点开报名',
+  'share.withQuota_one': '{title} · 还差 1 人，点开报名',
+  'share.full': '{title} · 已报满',
+  'share.noQuota': '{title} · 点开报名',
+
+  /* ---------- 意见反馈 ---------- */
+  'contact.entry': '意见反馈 · 联系客服',
 
   /* ---------- 时间 ---------- */
   'time.weekdays': ['周日', '周一', '周二', '周三', '周四', '周五', '周六'],

@@ -399,9 +399,12 @@ function render(){
     +     (sol.quota > 0 ? '<div class="progress-bar"><div class="progress-inner" style="width:' + sol.percent + '%"></div></div>' : '')
     +     '<div class="deadline-tip">' + esc(sol.deadlineText) + '</div>'
     +   '</div>'
-    +   (sol.isOwner
-        ? '<div class="owner-entry" data-act="openadmin"><span class="owner-entry-t">' + esc(m.owner_manage) + '</span><span class="owner-entry-arrow">&rsaquo;</span></div>'
-        : '')
+    +   '<div class="act-row">'
+    +     '<div class="act-item act-share" data-act="share"><span class="act-item-t">' + esc(m.intro_share) + '</span><span class="act-item-arrow">&rsaquo;</span></div>'
+    +     (sol.isOwner
+          ? '<div class="act-item" data-act="openadmin"><span class="act-item-t">' + esc(m.owner_manage) + '</span><span class="act-item-arrow">&rsaquo;</span></div>'
+          : '')
+    +   '</div>'
     + '</div>');
 
   var footer = ''
@@ -570,6 +573,9 @@ function render(){
     +   '</div>'
     +   intro
     +   listBlock
+    +   '<div class="contact-wrap">'
+    +     '<div class="contact-btn" data-act="contact">' + esc(m.contact_entry) + '</div>'
+    +   '</div>'
     +   '<div class="foot-space"></div>'
     + '</div>'
     + (isEmpty ? '' : footer)
@@ -608,9 +614,33 @@ function doOpenJoin(){
   render();
 }
 
+/** 与页面 onShareAppMessage 同一套逻辑：预览里点「转发到群」可以直接看到卡片标题 */
+function shareTitle(){
+  var m = M();
+  var s = store.getSolitaire();
+  if (s.empty) return m.share_default;
+  var tpl;
+  if (s.quota > 0) {
+    if (s.left > 0) tpl = (s.left === 1 && m.share_withQuota_one) ? m.share_withQuota_one : m.share_withQuota;
+    else tpl = m.share_full;
+  } else {
+    tpl = m.share_noQuota;
+  }
+  return String(tpl).replace('{title}', s.title || '').replace('{n}', s.left);
+}
+
 function onAct(act, el){
   var m = M();
   if (act === 'switchlang') { setLang(lang === 'zh' ? 'en' : 'zh'); return; }
+
+  if (act === 'share') {
+    flash('转发卡片标题：' + shareTitle());
+    return;
+  }
+  if (act === 'contact') {
+    flash('真机点这里会拉起微信客服会话（需先在后台「功能 → 客服」添加客服人员）');
+    return;
+  }
 
   if (act === 'openjoin') {
     // 与真机同流程：先确认隐私授权，不同意只提示、不打开填写面板

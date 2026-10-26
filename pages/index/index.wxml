@@ -55,10 +55,16 @@
       <view class="deadline-tip">{{solitaire.deadlineText}}</view>
     </view>
 
-    <!-- 管理入口：仅发起人可见 -->
-    <view class="owner-entry" wx:if="{{solitaire.isOwner}}" bindtap="openAdmin">
-      <text class="owner-entry-t">{{t.owner_manage}}</text>
-      <text class="owner-entry-arrow">›</text>
+    <!-- 转发对所有人开放（接龙靠转发传播），管理仅发起人可见 -->
+    <view class="act-row">
+      <button class="act-item act-share" open-type="share" hover-class="act-hover">
+        <text class="act-item-t">{{t.intro_share}}</text>
+        <text class="act-item-arrow">›</text>
+      </button>
+      <view class="act-item" wx:if="{{solitaire.isOwner}}" bindtap="openAdmin">
+        <text class="act-item-t">{{t.owner_manage}}</text>
+        <text class="act-item-arrow">›</text>
+      </view>
     </view>
   </view>
 
@@ -110,6 +116,11 @@
     </view>
   </view>
   </block>
+
+  <!-- ================= 反馈入口 ================= -->
+  <view class="contact-wrap">
+    <button class="contact-btn" open-type="contact" hover-class="contact-hover">{{t.contact_entry}}</button>
+  </view>
 
   <view class="foot-space"></view>
 </view>
